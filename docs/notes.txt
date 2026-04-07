@@ -1,0 +1,238 @@
+Promt
+Bạn hãy đóng vai trò là một Fullstack Developer (Senior level) và thiết kế + lập trình một hệ thống Automation Report dựa trên các workflow (activity diagram) tôi đã cung cấp.
+
+Mục tiêu hệ thống
+
+Xây dựng một web app hoàn chỉnh bao gồm:
+
+- Backend: Node.js (Express hoặc tương đương)
+
+- Database: PostgreSQL
+
+- Frontend: React (UI/UX hiện đại, dễ dùng)
+
+- Không sử dụng ràng buộc cứng theo mô hình MVC (có thể dùng modular / service-based architecture)
+
+Yêu cầu quan trọng
+
+- KHÔNG implement phần kết nối SOAR API (chỉ mock hoặc để placeholder)
+
+- Tập trung hoàn chỉnh toàn bộ flow chính:
+
++ Login
+
++ Tạo báo cáo
+
++ Xem / chỉnh sửa báo cáo
+
++ Xuất báo cáo (Word / Excel)
+
++ Tải file về máy user (download từ server)
+
+- Code theo hướng MVP nhưng có thể mở rộng
+
+- Có phân tách rõ ràng các layer (routes / services / db / utils / UI components…)
+
+- Có chú thích rõ ràng từng file thuộc phần nào (ví dụ: controller, service, route…)
+
+Functional Requirements (bám sát workflow)
+
+1. Authentication
+
+- Login bằng username/password
+
+-  API: POST /auth/login
+
+-  Validate user → tạo JWT token → lưu session
+
+-  Nếu fail → trả lỗi
+
+2. Tạo báo cáo (Create Report)
+
+- User có thể chọn nguồn dữ liệu: 
+
++ Upload file Excel
+
++ Nhập dữ liệu thủ công
+
++ (SOAR → chỉ mock)
+
+-  Flow xử lý: 
+
++ Parse dữ liệu (Excel / input)
+
++ Chuẩn hóa dữ liệu
+
++ Mapping vào template báo cáo
+
++ Tạo nội dung báo cáo
+
++ Hiển thị preview
+
+3. Xem / Chỉnh sửa báo cáo
+
+- Lấy dữ liệu report từ DB
+
+- Hiển thị preview
+
+- Cho phép edit nội dung
+
+- Lưu thay đổi
+
+4. Xuất báo cáo
+
+- User chọn định dạng:
+
++ Word (.docx)
+
++ Excel (.xlsx)
+
+- Generate file tương ứng
+
+- Lưu file trên server
+
+- Trả về link download
+
+5. Tải file (Download)
+
+- API download file từ server
+
+- Trả file về máy user (stream/download)
+
+- Kiểm tra file tồn tại trước khi tải
+
+Database Design (PostgreSQL)
+
+- Thiết kế các bảng tối thiểu:
+
++ users
+
++ reports
+
++ report_contents
+
++ files
+
+- Yêu cầu:
+
++ Có schema rõ ràng
+
++ Có quan hệ (foreign key)
+
++ Có timestamp
+
+Backend Requirements
+
+- Cấu trúc project rõ ràng (KHÔNG MVC cứng)
+
+- Ví dụ structure:
+
+backend/
+
+ ├── src/
+
+ │   ├── modules/
+
+ │   │   ├── auth/
+
+ │   │   ├── report/
+
+ │   │   ├── file/
+
+ │   ├── services/
+
+ │   ├── db/
+
+ │   ├── utils/
+
+ │   ├── middlewares/
+
+ │   ├── routes/
+
+ │   └── app.js
+
+- Phải có:
+
++ Auth middleware (JWT)
+
++ File upload (multer)
+
++ File export (docx, excel)
+
++ Error handling
+
+Frontend Requirements (React)
+
+- UI hiện đại (dashboard style)
+
+- Responsive
+
+- UX rõ ràng theo workflow
+
+Các màn hình chính:
+
+- Login Page
+
+- Dashboard
+
+- Create Report
+
+- Report Editor
+
+- Preview Report
+
+- Export & Download
+
+UI/UX yêu cầu
+
+- Clean, chuyên nghiệp (giống SaaS dashboard)
+
+- Có: 
+
++ Sidebar
+
++ Navbar
+
++ Card layout
+
++ Table report
+
++ Editor (textarea hoặc rich editor đơn giản)
+
+- Flow rõ ràng theo user journey
+
+Output mong muốn
+
+- Bạn phải cung cấp:
+
+1. Full source code
+
+- Backend (Node.js)
+
+- Frontend (React)
+
+2. Cấu trúc thư mục hoàn chỉnh
+
+3. Code chi tiết từng file
+
+- Có comment rõ:
+
++ file này thuộc layer nào
+
++ chức năng gì
+
+4. Database schema + SQL @
+
+5. Hướng dẫn chạy project
+
+Mục tiêu cuối
+
+- Một hệ thống chạy được end-to-end:
+
++ Login → Dashboard
+
++ Tạo report → Preview
+
++ Edit → Save
+
++ Export → Download file

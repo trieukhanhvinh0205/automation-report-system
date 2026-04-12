@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const pool = require("../db");
 const config = require("../config");
+const bcrypt = require("bcrypt");
 
 async function login(username, password) {
   const result = await pool.query(
@@ -14,8 +15,18 @@ async function login(username, password) {
     throw err;
   }
 
+  // const user = result.rows[0];
+  // if (user.password !== password) {
+  //   const err = new Error("Invalid username or password");
+  //   err.status = 401;
+  //   throw err;
+  // }
+
   const user = result.rows[0];
-  if (user.password !== password) {
+
+  const isMatch = await bcrypt.compare(password, user.password);
+
+  if (!isMatch) {
     const err = new Error("Invalid username or password");
     err.status = 401;
     throw err;

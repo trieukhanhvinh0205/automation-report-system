@@ -28,3 +28,7 @@ app.use(errorHandler);
 app.listen(config.port, "0.0.0.0", () => {
   console.log(`Server listening on port ${config.port}`);
 });
+
+app.get("/", (req, res) => {
+  res.send("Automation Report API is running 🚀");
+});

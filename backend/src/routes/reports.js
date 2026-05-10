@@ -14,6 +14,8 @@ const config = require("../config");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
+//ELK
+const { getElkReports } = require("../services/elkService");
 
 router.get(
   "/",
@@ -22,6 +24,20 @@ router.get(
     res.json({ reports });
   })
 );
+
+//ELK
+  router.get("/elk", async (req, res) => {
+    try {
+      const data = await getElkReports();
+      res.json(data);
+    } catch (error) {
+      console.error(error);
+
+      res.status(500).json({
+        message: "Failed to fetch ELK reports"
+      });
+    }
+  });
 
 router.get(
   "/:id",

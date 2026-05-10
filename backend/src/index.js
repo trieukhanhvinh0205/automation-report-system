@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const morgan = require("morgan");
 const cors = require("cors");
@@ -22,7 +23,7 @@ app.get("/health", (req, res) => {
 app.use("/auth", authRoutes);
 app.use("/reports", authMiddleware, reportRoutes);
 app.use("/files", authMiddleware, fileRoutes);
-
+app.use("/api/reports", reportRoutes); //ELK
 app.use(errorHandler);
 
 app.listen(config.port, "0.0.0.0", () => {

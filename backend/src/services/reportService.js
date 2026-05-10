@@ -1,6 +1,8 @@
 const fs = require("fs");
 const pool = require("../db");
 const { generateDocx, generateXlsx, buildExportPath } = require("../utils/reportGenerator");
+//ELK
+const { fetchElkAlerts } = require("./elkService");
 
 async function createReport({ userId, title, description, status, content }) {
   const client = await pool.connect();
@@ -145,10 +147,28 @@ async function exportReport({ reportId, userId, format, uploadDir }) {
   return { file: fileResult.rows[0], report };
 }
 
+//ELK
+async function getElkReports() {
+  const logs = await fetchElkAlerts();
+
+  return logs.map((item) => ({
+    time: item._source["@timestamp"],
+    severity: item._source.severity,
+    priority: item._source.priority,
+    alert_name: item._source.siem_alert_name,
+    tactic: item._source.mitre_tactic,
+    technique: item._source.mitre_technique,
+    tenant: item._source.tenant,
+    resolution: item._source.resolution,
+    status: item._source.status
+  }));
+}
+
 module.exports = {
   createReport,
   listReports,
   getReportWithContent,
   updateReport,
-  exportReport
+  exportReport,
+  getElkReports
 };

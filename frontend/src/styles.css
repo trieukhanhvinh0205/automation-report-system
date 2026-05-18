@@ -252,6 +252,31 @@ tbody tr.selected {
   color: #166534;
 }
 
+.badge.severity-critical {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.badge.severity-high {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.badge.severity-medium {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.badge.severity-low {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge.severity-unknown {
+  background: #e2e8f0;
+  color: #334155;
+}
+
 .actions {
   margin-top: 10px;
   display: grid;
@@ -268,6 +293,108 @@ tbody tr.selected {
 
 .muted {
   color: #64748b;
+}
+
+.tiny {
+  font-size: 12px;
+}
+
+.elk-panel h3 {
+  margin-bottom: 4px;
+}
+
+.elk-header p {
+  margin: 0;
+}
+
+.elk-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.elk-filters {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.advanced-toggle-row {
+  margin-bottom: 8px;
+}
+
+.advanced-filters {
+  margin-top: 0;
+}
+
+.elk-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.elk-stat-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px;
+  background: #f8fafc;
+  display: grid;
+  gap: 4px;
+}
+
+.elk-stat-card strong {
+  font-size: 22px;
+}
+
+.elk-tactics {
+  margin-bottom: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.tactics-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tactic-chip {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1e40af;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.sort-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.sort-btn:hover {
+  color: #0369a1;
+}
+
+.pagination {
+  margin-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.page-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
 }
 
 @media (max-width: 980px) {
@@ -287,5 +414,14 @@ tbody tr.selected {
 
   .actions {
     grid-template-columns: 1fr;
+  }
+
+  .elk-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .elk-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 }

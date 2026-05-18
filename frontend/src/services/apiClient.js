@@ -1,11 +1,7 @@
 import axios from "axios";
 
-// const apiClient = axios.create({
-//   baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:3000"
-// });
-
 const apiClient = axios.create({
-  baseURL: "/api"   // ✅ sửa chỗ này
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:2205"
 });
 
 apiClient.interceptors.request.use((config) => {

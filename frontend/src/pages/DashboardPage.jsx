@@ -5,10 +5,13 @@ import Topbar from "../components/Topbar";
 import ReportForm from "../components/ReportForm";
 import ReportTable from "../components/ReportTable";
 import ReportEditor from "../components/ReportEditor";
+import ElkDashboard from "../components/ElkDashboard";
 import {
   createReport,
   downloadFile,
+  exportElkWord,
   exportReport,
+  getElkAlerts,
   getReport,
   listReports,
   updateReport
@@ -16,8 +19,14 @@ import {
 
 function DashboardPage() {
   const { logout } = useAuth();
+  const [activeView, setActiveView] = useState("reports");
   const [reports, setReports] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
+  const [elkAlerts, setElkAlerts] = useState([]);
+  const [elkQuery, setElkQuery] = useState({});
+  const [loadingElk, setLoadingElk] = useState(false);
+  const [elkError, setElkError] = useState("");
+  const [elkLastUpdated, setElkLastUpdated] = useState(null);
   const [message, setMessage] = useState("");
   const [loadingCreate, setLoadingCreate] = useState(false);
   const [loadingAction, setLoadingAction] = useState(false);
@@ -32,6 +41,37 @@ function DashboardPage() {
       setMessage("Failed to load reports");
     });
   }, []);
+
+  async function loadElkAlerts(query = elkQuery) {
+    setElkQuery(query);
+    setLoadingElk(true);
+    try {
+      const data = await getElkAlerts(query);
+      setElkAlerts(data);
+      setElkError("");
+      setElkLastUpdated(new Date().toISOString());
+    } catch (err) {
+      setElkError(err.response?.data?.message || "Failed to load ELK alerts");
+    } finally {
+      setLoadingElk(false);
+    }
+  }
+
+  useEffect(() => {
+    if (activeView !== "elk") return undefined;
+    loadElkAlerts(elkQuery);
+    const timer = setInterval(() => loadElkAlerts(elkQuery), 30000);
+    return () => clearInterval(timer);
+  }, [activeView, elkQuery]);
+
+  async function handleElkExportWord(query) {
+    try {
+      await exportElkWord(query);
+      setElkError("");
+    } catch (err) {
+      setElkError(err.response?.data?.message || "Failed to export Word");
+    }
+  }
 
   async function handleSelect(reportId) {
     try {
@@ -96,34 +136,49 @@ function DashboardPage() {
 
   return (
     <main className="dashboard-layout">
-      <Sidebar onLogout={logout} />
+      <Sidebar onLogout={logout} activeView={activeView} onViewChange={setActiveView} />
 
       <section className="dashboard-main">
         <Topbar
-          title="Automation Report Dashboard"
-          subtitle="Create, preview, edit, export and download reports"
+          title={activeView === "reports" ? "Automation Report Dashboard" : "ELK Monitoring Dashboard"}
+          subtitle={
+            activeView === "reports"
+              ? "Create, preview, edit, export and download reports"
+              : "Track alert activity with filters by severity, tenant, analyst and MITRE fields"
+          }
         />
 
-        {message && <div className="notice">{message}</div>}
+        {activeView === "reports" && message && <div className="notice">{message}</div>}
 
-        <div className="dashboard-grid">
-          <div className="left-col">
-            <ReportForm onCreate={handleCreate} loading={loadingCreate} />
-            <ReportTable
-              reports={reports}
-              selectedId={selectedReport?.id}
-              onSelect={handleSelect}
+        {activeView === "reports" ? (
+          <div className="dashboard-grid">
+            <div className="left-col">
+              <ReportForm onCreate={handleCreate} loading={loadingCreate} />
+              <ReportTable
+                reports={reports}
+                selectedId={selectedReport?.id}
+                onSelect={handleSelect}
+              />
+            </div>
+
+            <ReportEditor
+              report={selectedReport}
+              onSave={handleSave}
+              onExport={handleExport}
+              onDownload={handleDownload}
+              actionLoading={loadingAction}
             />
           </div>
-
-          <ReportEditor
-            report={selectedReport}
-            onSave={handleSave}
-            onExport={handleExport}
-            onDownload={handleDownload}
-            actionLoading={loadingAction}
+        ) : (
+          <ElkDashboard
+            alerts={elkAlerts}
+            loading={loadingElk}
+            error={elkError}
+            onRefresh={loadElkAlerts}
+            onExportWord={handleElkExportWord}
+            lastUpdated={elkLastUpdated}
           />
-        </div>
+        )}
       </section>
     </main>
   );

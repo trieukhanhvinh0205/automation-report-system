@@ -1,7 +1,16 @@
 const fs = require("fs");
 const path = require("path");
 const ExcelJS = require("exceljs");
-const { Document, Packer, Paragraph, TextRun } = require("docx");
+const {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  Table,
+  TableRow,
+  TableCell,
+  WidthType
+} = require("docx");
 
 function normalizeContent(content) {
   if (typeof content === "string") {
@@ -60,8 +69,91 @@ function buildExportPath(uploadDir, reportId, format) {
   return path.join(uploadDir, filename);
 }
 
+async function generateElkCasesDocx({ rows, outputPath, title }) {
+  const columns = [
+    { key: "timestamp", label: "Timestamp" },
+    { key: "openCaseTime", label: "Open Case Time" },
+    { key: "caseAnalyzedTime", label: "Analyzed Time" },
+    { key: "caseDetectedTime", label: "Detected Time" },
+    { key: "alertName", label: "Alert Name" },
+    { key: "severity", label: "Severity" },
+    { key: "priority", label: "Priority" },
+    { key: "status", label: "Status" },
+    { key: "sla", label: "SLA" },
+    { key: "tenant", label: "Tenant" },
+    { key: "analyst", label: "Analyst" },
+    { key: "resolution", label: "Resolution" },
+    { key: "reasonCloseCase", label: "Reason Close Case" },
+    { key: "messageConfirmCase", label: "Message Confirm Case" },
+    { key: "platform", label: "Platform" },
+    { key: "soarId", label: "SOAR ID" },
+    { key: "siemAlertId", label: "SIEM Alert ID" },
+    { key: "soarCaseName", label: "SOAR Case Name" },
+    { key: "tactics", label: "MITRE Tactics" },
+    { key: "techniques", label: "MITRE Techniques" },
+    { key: "timeDiffMinutes", label: "timeDiffMinutes" },
+    { key: "timeDetectedToAnalyzedMinutes", label: "timeDetectedtoAnalyzedMinutes" },
+    { key: "timeOpenToDetectedMinutes", label: "timeOpentoDetectedMinutes" }
+  ];
+
+  const headerRow = new TableRow({
+    children: columns.map(
+      (column) =>
+        new TableCell({
+          children: [new Paragraph({ children: [new TextRun({ text: column.label, bold: true })] })]
+        })
+    )
+  });
+
+  const formatCellValue = (value) => {
+    if (Array.isArray(value)) return value.join(", ");
+    if (value === null || value === undefined) return "";
+    if (typeof value === "object") return JSON.stringify(value);
+    return String(value);
+  };
+
+  const bodyRows = rows.map(
+    (item) =>
+      new TableRow({
+        children: columns.map((column) =>
+          new TableCell({
+            children: [new Paragraph(formatCellValue(item[column.key]))]
+          })
+        )
+      })
+  );
+
+  const table = new Table({
+    rows: [headerRow, ...bodyRows],
+    width: {
+      size: 100,
+      type: WidthType.PERCENTAGE
+    }
+  });
+
+  const doc = new Document({
+    sections: [
+      {
+        children: [
+          new Paragraph({
+            children: [new TextRun({ text: title || "ELK Case Report", bold: true })]
+          }),
+          new Paragraph({
+            children: [new TextRun({ text: `Generated at: ${new Date().toISOString()}` })]
+          }),
+          table
+        ]
+      }
+    ]
+  });
+
+  const buffer = await Packer.toBuffer(doc);
+  await fs.promises.writeFile(outputPath, buffer);
+}
+
 module.exports = {
   generateDocx,
   generateXlsx,
-  buildExportPath
+  buildExportPath,
+  generateElkCasesDocx
 };

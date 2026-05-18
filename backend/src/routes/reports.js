@@ -1,5 +1,7 @@
 const express = require("express");
+const fs = require("fs");
 const multer = require("multer");
+const path = require("path");
 const asyncHandler = require("../utils/asyncHandler");
 const { requireFields } = require("../utils/validation");
 const { parseExcel } = require("../utils/excelParser");
@@ -11,6 +13,7 @@ const {
   exportReport
 } = require("../services/reportService");
 const config = require("../config");
+const { generateElkCasesDocx } = require("../utils/reportGenerator");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -25,19 +28,44 @@ router.get(
   })
 );
 
-//ELK
-  router.get("/elk", async (req, res) => {
-    try {
-      const data = await getElkReports();
-      res.json(data);
-    } catch (error) {
-      console.error(error);
-
-      res.status(500).json({
-        message: "Failed to fetch ELK reports"
-      });
+router.get(
+  "/elk",
+  asyncHandler(async (req, res) => {
+    const filters = { ...req.query };
+    if (filters.size) {
+      filters.size = Number(filters.size);
     }
-  });
+    const data = await getElkReports({
+      ...filters
+    });
+
+    res.json(data);
+  })
+);
+
+router.post(
+  "/elk/export-word",
+  asyncHandler(async (req, res) => {
+    const { title, ...filters } = req.body || {};
+
+    const rows = await getElkReports({
+      ...filters,
+      size: 500
+    });
+
+    const filename = `elk_cases_${Date.now()}.docx`;
+    const outputPath = path.join(config.uploadDir, filename);
+    await fs.promises.mkdir(config.uploadDir, { recursive: true });
+
+    await generateElkCasesDocx({
+      rows,
+      outputPath,
+      title: title || "ELK Cases Report"
+    });
+
+    return res.download(outputPath, filename);
+  })
+);
 
 router.get(
   "/:id",

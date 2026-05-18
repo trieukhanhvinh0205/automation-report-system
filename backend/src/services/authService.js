@@ -24,7 +24,22 @@ async function login(username, password) {
 
   const user = result.rows[0];
 
-  const isMatch = await bcrypt.compare(password, user.password);
+  let isMatch = false;
+  const hashPattern = /^\$2[aby]\$\d{2}\$.{53}$/;
+
+  if (hashPattern.test(user.password || "")) {
+    isMatch = await bcrypt.compare(password, user.password);
+  } else {
+    // Backward compatibility for old plain-text passwords.
+    isMatch = password === user.password;
+    if (isMatch) {
+      const newHash = await bcrypt.hash(password, 10);
+      await pool.query("UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2", [
+        newHash,
+        user.id
+      ]);
+    }
+  }
 
   if (!isMatch) {
     const err = new Error("Invalid username or password");

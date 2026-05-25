@@ -20,6 +20,13 @@ function Sidebar({ onLogout, activeView, onViewChange }) {
         >
           ELK Monitoring
         </button>
+        <button
+          className={`menu-item ${activeView === "templates" ? "active" : ""}`}
+          type="button"
+          onClick={() => onViewChange("templates")}
+        >
+          Template Builder
+        </button>
       </nav>
       <button className="ghost danger" type="button" onClick={onLogout}>
         Logout

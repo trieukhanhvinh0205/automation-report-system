@@ -255,6 +255,11 @@ function mapElkItem(item) {
 }
 
 async function getElkReports(filters = {}) {
+  const result = await searchElkReports(filters);
+  return result.rows;
+}
+
+async function searchElkReports(filters = {}) {
   try {
     const query = buildElkQuery(filters);
     const response = await axios.post(
@@ -274,7 +279,11 @@ async function getElkReports(filters = {}) {
       }
     );
 
-    return response.data.hits.hits.map(mapElkItem);
+    const total = response.data.hits.total;
+    return {
+      rows: response.data.hits.hits.map(mapElkItem),
+      total: typeof total === "number" ? total : Number(total?.value || 0)
+    };
   } catch (error) {
     console.error("ELK ERROR:", error.response?.data || error.message);
     throw error;
@@ -282,5 +291,7 @@ async function getElkReports(filters = {}) {
 }
 
 module.exports = {
-  getElkReports
+  buildElkQuery,
+  getElkReports,
+  searchElkReports
 };

@@ -6,6 +6,7 @@ const config = require("./config");
 const authRoutes = require("./routes/auth");
 const reportRoutes = require("./routes/reports");
 const fileRoutes = require("./routes/files");
+const templateRoutes = require("./routes/templates");
 const authMiddleware = require("./middlewares/auth");
 const errorHandler = require("./middlewares/error");
 
@@ -29,6 +30,7 @@ app.get("/health", (req, res) => {
 app.use("/auth", authRoutes);
 app.use("/reports", authMiddleware, reportRoutes);
 app.use("/files", authMiddleware, fileRoutes);
+app.use("/templates", authMiddleware, templateRoutes);
 app.use("/api/reports", reportRoutes); //ELK
 app.use(errorHandler);
 

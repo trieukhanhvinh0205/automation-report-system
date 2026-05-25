@@ -6,6 +6,7 @@ import ReportForm from "../components/ReportForm";
 import ReportTable from "../components/ReportTable";
 import ReportEditor from "../components/ReportEditor";
 import ElkDashboard from "../components/ElkDashboard";
+import TemplateBuilderPage from "./TemplateBuilderPage";
 import {
   createReport,
   downloadFile,
@@ -140,11 +141,19 @@ function DashboardPage() {
 
       <section className="dashboard-main">
         <Topbar
-          title={activeView === "reports" ? "Automation Report Dashboard" : "ELK Monitoring Dashboard"}
+          title={
+            activeView === "reports"
+              ? "Automation Report Dashboard"
+              : activeView === "elk"
+                ? "ELK Monitoring Dashboard"
+                : "Template Builder"
+          }
           subtitle={
             activeView === "reports"
               ? "Create, preview, edit, export and download reports"
-              : "Track alert activity with filters by severity, tenant, analyst and MITRE fields"
+              : activeView === "elk"
+                ? "Track alert activity with filters by severity, tenant, analyst and MITRE fields"
+                : "Build reusable SOC report templates with DOCX extraction, mapping and export"
           }
         />
 
@@ -169,7 +178,7 @@ function DashboardPage() {
               actionLoading={loadingAction}
             />
           </div>
-        ) : (
+        ) : activeView === "elk" ? (
           <ElkDashboard
             alerts={elkAlerts}
             loading={loadingElk}
@@ -178,6 +187,8 @@ function DashboardPage() {
             onExportWord={handleElkExportWord}
             lastUpdated={elkLastUpdated}
           />
+        ) : (
+          <TemplateBuilderPage />
         )}
       </section>
     </main>

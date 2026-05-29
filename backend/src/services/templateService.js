@@ -56,6 +56,16 @@ async function listTemplates({ customerId, includeGlobal = true } = {}) {
   return result.rows;
 }
 
+async function listCustomers() {
+  const result = await pool.query(
+    `SELECT id, code, name, full_name, tenant, created_at, updated_at
+     FROM customers
+     ORDER BY name ASC, id ASC`
+  );
+
+  return result.rows;
+}
+
 async function getTemplateDetail(templateId) {
   const templateResult = await pool.query("SELECT * FROM report_templates WHERE id = $1", [templateId]);
   if (templateResult.rowCount === 0) {
@@ -97,6 +107,23 @@ async function getTemplateDetail(templateId) {
       layout: layout.rows[0]?.layout_json || templateJson.layout || {}
     }
   };
+}
+
+async function deleteTemplate(templateId) {
+  const result = await pool.query(
+    `DELETE FROM report_templates
+     WHERE id = $1
+     RETURNING id, name`,
+    [templateId]
+  );
+
+  if (result.rowCount === 0) {
+    const err = new Error("Template not found");
+    err.status = 404;
+    throw err;
+  }
+
+  return result.rows[0];
 }
 
 async function updateLayout(templateId, layoutJson) {
@@ -311,7 +338,9 @@ function parseDefault(value) {
 
 module.exports = {
   createTemplate,
+  deleteTemplate,
   getTemplateDetail,
+  listCustomers,
   listTemplates,
   updateSection,
   updateFieldMapping,

@@ -33,6 +33,8 @@ function baseFields() {
     field("monitoring_start_text", "Thời gian bắt đầu dạng text", "text", "computed", null, false),
     field("monitoring_end_text", "Thời gian kết thúc dạng text", "text", "computed", null, false),
     field("monitoring_period", "Kỳ giám sát", "text", "computed", null, false),
+    field("report_start_date", "Ngày bắt đầu báo cáo", "text", "computed", null, false),
+    field("report_end_date", "Ngày kết thúc báo cáo", "text", "computed", null, false),
     field("security_status", "Tình trạng an toàn thông tin", "text", "manual", "An toàn", false),
     field("total_processed_alerts", "Tổng số cảnh báo đã xử lý", "number", "elk", 0, true),
     field("sla_total", "Tổng SLA", "number", "computed", 0, false),

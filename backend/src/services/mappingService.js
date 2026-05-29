@@ -91,13 +91,15 @@ async function resolveElkField(field, values) {
   if (mode === "severity_summary") return buildSeveritySummary(rows);
   if (field.field_key === "mitre_summary") return buildMitreSummary(rows);
 
-  return rows.map(mapAlertRow);
+  return rows.map((row, index) => mapAlertRow(row, index));
 }
 
 function computeField(field, values) {
   const key = field.field_key;
   if (key === "monitoring_start_text") return formatViDateTime(values.monitoring_start);
   if (key === "monitoring_end_text") return formatViDateTime(values.monitoring_end);
+  if (key === "report_start_date") return formatViDate(values.monitoring_start);
+  if (key === "report_end_date") return formatViDate(values.monitoring_end);
   if (key === "monitoring_period") return `Từ ${values.monitoring_start_text || formatViDateTime(values.monitoring_start)} đến ${values.monitoring_end_text || formatViDateTime(values.monitoring_end)}`;
   if (key === "sla_total") return Number(values.total_processed_alerts || 0);
   if (key === "sla_on_time") return Number(values.total_processed_alerts || 0) - Number(values.sla_late || 0);
@@ -132,8 +134,9 @@ function buildMitreSummary(rows = []) {
   return Object.entries(counts).map(([tactic, count]) => ({ tactic, count }));
 }
 
-function mapAlertRow(row) {
+function mapAlertRow(row, index = 0) {
   return {
+    stt: index + 1,
     offense_id: row.soarId || row.siemAlertId || row.id,
     siem_rule: row.alertName || row.soarCaseName,
     detected_time: row.caseDetectedTime || row.timestamp,
@@ -147,7 +150,9 @@ function mapAlertRow(row) {
     tenant: row.tenant,
     analyst: row.analyst,
     tactics: row.tactics,
-    techniques: row.techniques
+    techniques: row.techniques,
+    resolution: row.resolution,
+    platform: row.platform
   };
 }
 
@@ -166,11 +171,20 @@ function formatViDateTime(value) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
-  const hh = String(date.getHours()).padStart(2, "0");
-  const mm = String(date.getMinutes()).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  return `${hh}h${mm} ngày ${dd}/${month}/${date.getFullYear()}`;
+  const hh = String(date.getUTCHours()).padStart(2, "0");
+  const mm = String(date.getUTCMinutes()).padStart(2, "0");
+  const dd = String(date.getUTCDate()).padStart(2, "0");
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  return `${hh}h${mm} ngày ${dd}/${month}/${date.getUTCFullYear()}`;
+}
+
+function formatViDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  const dd = String(date.getUTCDate()).padStart(2, "0");
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  return `${dd}/${month}/${date.getUTCFullYear()}`;
 }
 
 module.exports = {

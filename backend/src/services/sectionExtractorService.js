@@ -79,11 +79,58 @@ function buildDataBinding(sectionKey) {
 
   return {
     field_key: tableFields[sectionKey],
-    row_template: { columns: [] }
+    row_template: { columns: getColumnsForSection(sectionKey) }
   };
+}
+
+function getColumnsForSection(sectionKey) {
+  if (["operation_alerts", "security_alerts", "incident_alerts"].includes(sectionKey)) {
+    return [
+      { key: "stt", label: "STT" },
+      { key: "offense_id", label: "Offense ID trên SIEM" },
+      { key: "siem_rule", label: "Cảnh báo trên SIEM" },
+      { key: "severity", label: "Mức độ" },
+      { key: "priority", label: "Độ ưu tiên" },
+      { key: "detected_time", label: "Thời gian phát hiện" },
+      { key: "case_created_time", label: "Thời gian tạo case" },
+      { key: "description", label: "Cảnh báo" },
+      { key: "status", label: "Xử lý" },
+      { key: "sla", label: "Đáp ứng SLA" },
+      { key: "handling_detail", label: "Chi tiết xử lý" },
+      { key: "analyst", label: "Chuyên viên xử lý" },
+      { key: "tactics", label: "MITRE Tactics" },
+      { key: "techniques", label: "MITRE Techniques" },
+      { key: "resolution", label: "Kết luận xử lý" },
+      { key: "tenant", label: "Tenant" },
+      { key: "platform", label: "Nền tảng" }
+    ];
+  }
+
+  if (sectionKey === "case_summary") {
+    return [
+      { key: "name", label: "Loại cảnh báo" },
+      { key: "critical", label: "Critical" },
+      { key: "high", label: "High" },
+      { key: "medium", label: "Medium" },
+      { key: "low", label: "Low" }
+    ];
+  }
+
+  if (sectionKey === "rule_optimization") {
+    return [
+      { key: "stt", label: "STT" },
+      { key: "time", label: "Thời gian" },
+      { key: "rule_name", label: "Tên rule" },
+      { key: "exceptions", label: "Ngoại lệ" },
+      { key: "note", label: "Ghi chú" }
+    ];
+  }
+
+  return [];
 }
 
 module.exports = {
   DEFAULT_SECTIONS,
-  extractSections
+  extractSections,
+  getColumnsForSection
 };

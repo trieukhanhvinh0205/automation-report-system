@@ -17,8 +17,18 @@ export async function listTemplates(params = {}) {
   return response.data.templates || [];
 }
 
+export async function listCustomers() {
+  const response = await apiClient.get("/templates/customers");
+  return response.data.customers || [];
+}
+
 export async function getTemplate(templateId) {
   const response = await apiClient.get(`/templates/${templateId}`);
+  return response.data;
+}
+
+export async function deleteTemplate(templateId) {
+  const response = await apiClient.delete(`/templates/${templateId}`);
   return response.data;
 }
 
@@ -44,5 +54,17 @@ export async function previewTemplate(templateId, payload) {
 
 export async function exportTemplate(templateId, payload) {
   const response = await apiClient.post(`/templates/${templateId}/export`, payload);
+  return response.data;
+}
+
+export async function templateizeTemplate(templateId, payload) {
+  const response = await apiClient.post(`/templates/${templateId}/templateize`, payload);
+  return response.data;
+}
+
+export async function downloadGeneratedTemplateReport(downloadUrl) {
+  const response = await apiClient.get(downloadUrl, {
+    responseType: "blob"
+  });
   return response.data;
 }

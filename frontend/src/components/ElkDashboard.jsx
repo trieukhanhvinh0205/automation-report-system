@@ -34,7 +34,7 @@ function sortByField(items, sortField, sortDirection) {
   });
 }
 
-function ElkDashboard({ alerts, loading, error, onRefresh, onExportWord, lastUpdated }) {
+function ElkDashboard({ alerts, meta, filterOptions, loading, error, onRefresh, onExportWord, lastUpdated }) {
   const [tenantFilter, setTenantFilter] = useState("all");
   const [analystFilter, setAnalystFilter] = useState("all");
   const [severityFilter, setSeverityFilter] = useState("all");
@@ -56,69 +56,52 @@ function ElkDashboard({ alerts, loading, error, onRefresh, onExportWord, lastUpd
   const [tacticsFilter, setTacticsFilter] = useState("");
   const [techniquesFilter, setTechniquesFilter] = useState("");
   const [q, setQ] = useState("");
+  const [selectedCase, setSelectedCase] = useState(null);
 
   const [sortField, setSortField] = useState("timestamp");
   const [sortDirection, setSortDirection] = useState("desc");
-  const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const [page, setPage] = useState(meta?.page || 1);
+  const [pageSize, setPageSize] = useState(meta?.size || 10);
 
   const tenantOptions = useMemo(() => {
-    const values = new Set(alerts.map((item) => toLabel(item.tenant)));
+    const values = new Set((filterOptions?.tenants?.length ? filterOptions.tenants : alerts.map((item) => toLabel(item.tenant))));
     return ["all", ...Array.from(values).sort((a, b) => a.localeCompare(b))];
-  }, [alerts]);
+  }, [alerts, filterOptions?.tenants]);
 
   const analystOptions = useMemo(() => {
-    const values = new Set(alerts.map((item) => toLabel(item.analyst)));
+    const values = new Set((filterOptions?.analysts?.length ? filterOptions.analysts : alerts.map((item) => toLabel(item.analyst))));
     return ["all", ...Array.from(values).sort((a, b) => a.localeCompare(b))];
-  }, [alerts]);
+  }, [alerts, filterOptions?.analysts]);
 
-  const filteredAlerts = useMemo(() => {
-    return alerts.filter((item) => {
-      const passTenant = tenantFilter === "all" || toLabel(item.tenant) === tenantFilter;
-      const passAnalyst = analystFilter === "all" || toLabel(item.analyst) === analystFilter;
-      const passSeverity = severityFilter === "all" || toLabel(item.severity) === severityFilter;
-      const passPriority = priorityFilter === "all" || toLabel(item.priority) === priorityFilter;
-      const passSearch =
-        !search ||
-        includesText(item.alertName, search) ||
-        includesText(item.tenant, search) ||
-        normalizeList(item.tactics).some((value) => includesText(value, search)) ||
-        normalizeList(item.techniques).some((value) => includesText(value, search));
-
-      return passTenant && passAnalyst && passSeverity && passPriority && passSearch;
-    });
-  }, [alerts, analystFilter, priorityFilter, search, severityFilter, tenantFilter]);
+  const selectedTenants = tenantFilter === "all" ? [] : tenantFilter.split(",").filter(Boolean);
+  const selectedAnalysts = analystFilter === "all" ? [] : analystFilter.split(",").filter(Boolean);
+  const selectedSeverities = severityFilter === "all" ? [] : severityFilter.split(",").filter(Boolean);
+  const selectedPriorities = priorityFilter === "all" ? [] : priorityFilter.split(",").filter(Boolean);
 
   useEffect(() => {
     setPage(1);
   }, [tenantFilter, analystFilter, severityFilter, priorityFilter, search, sortField, sortDirection]);
 
   const sortedAlerts = useMemo(() => {
-    return sortByField(filteredAlerts, sortField, sortDirection);
-  }, [filteredAlerts, sortDirection, sortField]);
+    return sortByField(alerts, sortField, sortDirection);
+  }, [alerts, sortDirection, sortField]);
 
   const totalPages = useMemo(() => {
-    return Math.max(1, Math.ceil(sortedAlerts.length / pageSize));
-  }, [sortedAlerts.length]);
+    return Math.max(1, Number(meta?.totalPages || Math.ceil(Number(meta?.total || 0) / pageSize) || 1));
+  }, [meta?.total, meta?.totalPages, pageSize]);
 
   useEffect(() => {
-    if (page > totalPages) {
-      setPage(totalPages);
-    }
-  }, [page, totalPages]);
-
-  const pageAlerts = useMemo(() => {
-    const startIndex = (page - 1) * pageSize;
-    return sortedAlerts.slice(startIndex, startIndex + pageSize);
-  }, [page, sortedAlerts]);
+    setPage(Number(meta?.page || 1));
+    setPageSize(Number(meta?.size || pageSize));
+  }, [meta?.page, meta?.size]);
 
   const severityStats = useMemo(() => {
-    return filteredAlerts.reduce((acc, item) => {
+    return alerts.reduce((acc, item) => {
       const key = toLabel(item.severity);
       acc[key] = (acc[key] || 0) + 1;
       return acc;
     }, {});
-  }, [filteredAlerts]);
+  }, [alerts]);
 
   const statEntries = Object.entries(severityStats).sort((a, b) => b[1] - a[1]);
 
@@ -152,10 +135,20 @@ function ElkDashboard({ alerts, loading, error, onRefresh, onExportWord, lastUpd
     setTechniquesFilter("");
     setQ("");
     setPage(1);
+    onRefresh({ page: 1, size: pageSize });
   }
 
-  function buildQueryForBackend() {
-    const query = {};
+  function toggleMultiValue(currentValue, value) {
+    const items = currentValue === "all" ? [] : currentValue.split(",").filter(Boolean);
+    const next = items.includes(value) ? items.filter((item) => item !== value) : [...items, value];
+    return next.length === 0 ? "all" : next.join(",");
+  }
+
+  function buildQueryForBackend(nextPage = page, nextSize = pageSize) {
+    const query = {
+      page: nextPage,
+      size: nextSize
+    };
     if (startTime) query.startTime = new Date(startTime).toISOString();
     if (endTime) query.endTime = new Date(endTime).toISOString();
     if (severityFilter !== "all") query.severity = severityFilter;
@@ -181,15 +174,52 @@ function ElkDashboard({ alerts, loading, error, onRefresh, onExportWord, lastUpd
   }
 
   function handleApplyQuery() {
-    onRefresh(buildQueryForBackend());
+    const nextPage = 1;
+    setPage(nextPage);
+    onRefresh(buildQueryForBackend(nextPage, pageSize));
   }
 
   function handleExportWord() {
     onExportWord(buildQueryForBackend());
   }
 
-  const pageStart = sortedAlerts.length === 0 ? 0 : (page - 1) * pageSize + 1;
-  const pageEnd = Math.min(page * pageSize, sortedAlerts.length);
+  function goToPage(nextPage) {
+    const normalizedPage = Math.min(Math.max(nextPage, 1), totalPages);
+    setPage(normalizedPage);
+    onRefresh(buildQueryForBackend(normalizedPage, pageSize));
+  }
+
+  function handlePageSizeChange(value) {
+    const nextSize = Number(value);
+    setPageSize(nextSize);
+    setPage(1);
+    onRefresh(buildQueryForBackend(1, nextSize));
+  }
+
+  const total = Number(meta?.total || 0);
+  const pageStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const pageEnd = Math.min(page * pageSize, total);
+  const paginationControls = (
+    <div className="pagination">
+      <span className="muted">Showing {pageStart}-{pageEnd} of {total}</span>
+      <div className="page-actions">
+        <label className="page-size-control">
+          Rows
+          <select value={pageSize} onChange={(event) => handlePageSizeChange(event.target.value)} disabled={loading}>
+            <option value={10}>1-10</option>
+            <option value={50}>1-50</option>
+            <option value={100}>1-100</option>
+            <option value={500}>1-500</option>
+          </select>
+        </label>
+        <button className="ghost" type="button" onClick={() => goToPage(1)} disabled={page <= 1 || loading}>First</button>
+        <button className="ghost" type="button" onClick={() => goToPage(page - 1)} disabled={page <= 1 || loading}>Prev</button>
+        <span className="muted">Page {page}/{totalPages}</span>
+        <button className="ghost" type="button" onClick={() => goToPage(page + 1)} disabled={page >= totalPages || loading}>Next</button>
+        <button className="ghost" type="button" onClick={() => goToPage(totalPages)} disabled={page >= totalPages || loading}>Last</button>
+      </div>
+    </div>
+  );
 
   return (
     <section className="panel elk-panel">
@@ -216,32 +246,34 @@ function ElkDashboard({ alerts, loading, error, onRefresh, onExportWord, lastUpd
         <input type="datetime-local" value={startTime} onChange={(event) => setStartTime(event.target.value)} />
         <input type="datetime-local" value={endTime} onChange={(event) => setEndTime(event.target.value)} />
         <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search alert name" />
-        <select value={tenantFilter} onChange={(event) => setTenantFilter(event.target.value)}>
-          {tenantOptions.map((item) => (
-            <option key={item} value={item}>{item === "all" ? "All Tenants" : item}</option>
-          ))}
-        </select>
-        <select value={analystFilter} onChange={(event) => setAnalystFilter(event.target.value)}>
-          {analystOptions.map((item) => (
-            <option key={item} value={item}>{item === "all" ? "All Analysts" : item}</option>
-          ))}
-        </select>
-        <select value={severityFilter} onChange={(event) => setSeverityFilter(event.target.value)}>
-          <option value="all">All Severity</option>
-          <option value="Critical">Critical</option>
-          <option value="High">High</option>
-          <option value="Medium">Medium</option>
-          <option value="Low">Low</option>
-          <option value="Unknown">Unknown</option>
-        </select>
-        <select value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value)}>
-          <option value="all">All Priority</option>
-          <option value="Critical">Critical</option>
-          <option value="High">High</option>
-          <option value="Medium">Medium</option>
-          <option value="Low">Low</option>
-          <option value="Unknown">Unknown</option>
-        </select>
+        <MultiSelectFilter
+          label="Tenant"
+          options={tenantOptions.filter((item) => item !== "all")}
+          selected={selectedTenants}
+          onToggle={(value) => setTenantFilter(toggleMultiValue(tenantFilter, value))}
+          onClear={() => setTenantFilter("all")}
+        />
+        <MultiSelectFilter
+          label="Analyst"
+          options={analystOptions.filter((item) => item !== "all")}
+          selected={selectedAnalysts}
+          onToggle={(value) => setAnalystFilter(toggleMultiValue(analystFilter, value))}
+          onClear={() => setAnalystFilter("all")}
+        />
+        <MultiSelectFilter
+          label="Severity"
+          options={(filterOptions?.severities?.length ? filterOptions.severities : ["Critical", "High", "Medium", "Low", "Unknown"])}
+          selected={selectedSeverities}
+          onToggle={(value) => setSeverityFilter(toggleMultiValue(severityFilter, value))}
+          onClear={() => setSeverityFilter("all")}
+        />
+        <MultiSelectFilter
+          label="Priority"
+          options={(filterOptions?.priorities?.length ? filterOptions.priorities : ["Critical", "High", "Medium", "Low", "Unknown"])}
+          selected={selectedPriorities}
+          onToggle={(value) => setPriorityFilter(toggleMultiValue(priorityFilter, value))}
+          onClear={() => setPriorityFilter("all")}
+        />
       </div>
 
       <div className="advanced-toggle-row">
@@ -287,6 +319,8 @@ function ElkDashboard({ alerts, loading, error, onRefresh, onExportWord, lastUpd
 
       {error && <div className="error">{error}</div>}
 
+      {paginationControls}
+
       <div className="table-wrap">
         <table>
           <thead>
@@ -306,13 +340,13 @@ function ElkDashboard({ alerts, loading, error, onRefresh, onExportWord, lastUpd
             </tr>
           </thead>
           <tbody>
-            {!loading && filteredAlerts.length === 0 && (
+            {!loading && alerts.length === 0 && (
               <tr>
                 <td colSpan={12} className="muted">No alerts matched current filters</td>
               </tr>
             )}
-            {pageAlerts.map((item) => (
-              <tr key={item.id || `${item.alertName}-${item.timestamp}`}>
+            {sortedAlerts.map((item) => (
+              <tr key={item.id || `${item.alertName}-${item.timestamp}`} onClick={() => setSelectedCase(item)}>
                 <td>{formatDate(item.timestamp)}</td>
                 <td>{item.alertName || "-"}</td>
                 <td><span className={`badge ${toSeverityClass(item.severity)}`}>{toLabel(item.severity)}</span></td>
@@ -331,17 +365,94 @@ function ElkDashboard({ alerts, loading, error, onRefresh, onExportWord, lastUpd
         </table>
       </div>
 
-      <div className="pagination">
-        <span className="muted">Showing {pageStart}-{pageEnd} of {sortedAlerts.length}</span>
-        <div className="page-actions">
-          <button className="ghost" type="button" onClick={() => setPage(1)} disabled={page <= 1}>First</button>
-          <button className="ghost" type="button" onClick={() => setPage((prev) => Math.max(1, prev - 1))} disabled={page <= 1}>Prev</button>
-          <span className="muted">Page {page}/{totalPages}</span>
-          <button className="ghost" type="button" onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))} disabled={page >= totalPages}>Next</button>
-          <button className="ghost" type="button" onClick={() => setPage(totalPages)} disabled={page >= totalPages}>Last</button>
-        </div>
-      </div>
+      {paginationControls}
+
+      {selectedCase && <CaseDetailDrawer item={selectedCase} onClose={() => setSelectedCase(null)} />}
     </section>
+  );
+}
+
+function MultiSelectFilter({ label, options, selected, onToggle, onClear }) {
+  return (
+    <div className="multi-filter">
+      <div className="multi-filter-head">
+        <span>{label}</span>
+        {selected.length > 0 && (
+          <button type="button" onClick={onClear}>
+            Clear
+          </button>
+        )}
+      </div>
+      <div className="multi-filter-options">
+        {options.length === 0 && <span className="muted tiny">No options</span>}
+        {options.map((option) => (
+          <button
+            className={`filter-chip ${selected.includes(option) ? "active" : ""}`}
+            type="button"
+            key={option}
+            onClick={() => onToggle(option)}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CaseDetailDrawer({ item, onClose }) {
+  const fields = [
+    ["Timestamp", formatDate(item.timestamp)],
+    ["Alert", item.alertName],
+    ["Severity", item.severity],
+    ["Priority", item.priority],
+    ["Tenant", item.tenant],
+    ["Analyst", item.analyst],
+    ["Status", item.status],
+    ["SLA", item.sla],
+    ["Resolution", item.resolution],
+    ["Reason Close", item.reasonCloseCase],
+    ["Message Confirm", item.messageConfirmCase],
+    ["SOAR ID", item.soarId],
+    ["SIEM Alert ID", item.siemAlertId],
+    ["SOAR Case Name", item.soarCaseName],
+    ["Platform", item.platform],
+    ["Open Case Time", formatDate(item.openCaseTime)],
+    ["Detected Time", formatDate(item.caseDetectedTime)],
+    ["Analyzed Time", formatDate(item.caseAnalyzedTime)],
+    ["MITRE Tactics", normalizeList(item.tactics).join(", ")],
+    ["MITRE Techniques", normalizeList(item.techniques).join(", ")],
+    ["Time Diff Minutes", item.timeDiffMinutes],
+    ["Detected To Analyzed Minutes", item.timeDetectedToAnalyzedMinutes],
+    ["Open To Detected Minutes", item.timeOpenToDetectedMinutes]
+  ];
+
+  return (
+    <div className="case-drawer-backdrop" onClick={onClose}>
+      <aside className="case-drawer" onClick={(event) => event.stopPropagation()}>
+        <div className="row-between">
+          <div>
+            <h3>Case Detail</h3>
+            <p className="muted">{item.alertName || item.soarCaseName || item.id}</p>
+          </div>
+          <button className="ghost" type="button" onClick={onClose}>
+            Close
+          </button>
+        </div>
+        <dl className="case-detail-list">
+          {fields.map(([label, value]) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>{toLabel(value)}</dd>
+            </div>
+          ))}
+        </dl>
+        <details className="raw-json">
+          <summary>Raw JSON</summary>
+          <pre>{JSON.stringify(item, null, 2)}</pre>
+        </details>
+      </aside>
+    </div>
   );
 }
 

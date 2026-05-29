@@ -10,15 +10,17 @@ const { extractSections } = require("../services/sectionExtractorService");
 const { extractFields } = require("../services/fieldExtractorService");
 const {
   createTemplate,
+  deleteTemplate,
   getTemplateDetail,
+  listCustomers,
   listTemplates,
   updateSection,
   updateFieldMapping,
   updateLayout
 } = require("../services/templateService");
 const { resolveFields } = require("../services/mappingService");
-const { renderTemplateHtml } = require("../services/templateRenderService");
-const { exportTemplateReport } = require("../services/templateExportService");
+const { renderTemplateHtml, renderValuesMarkdown } = require("../services/templateRenderService");
+const { createTemplateizedDocx, exportTemplateReport } = require("../services/templateExportService");
 
 const router = express.Router();
 const upload = multer({
@@ -108,6 +110,14 @@ router.get(
 );
 
 router.get(
+  "/customers",
+  asyncHandler(async (req, res) => {
+    const customers = await listCustomers();
+    res.json({ customers });
+  })
+);
+
+router.get(
   "/generated/:reportId/download",
   asyncHandler(async (req, res) => {
     const result = await pool.query("SELECT * FROM generated_reports WHERE id = $1", [
@@ -124,10 +134,32 @@ router.get(
 );
 
 router.get(
+  "/templateized/:fileName/download",
+  asyncHandler(async (req, res) => {
+    const fileName = path.basename(req.params.fileName);
+    const filePath = path.join(config.uploadDir, "templates", fileName);
+    if (!fs.existsSync(filePath)) {
+      const err = new Error("Templateized file not found");
+      err.status = 404;
+      throw err;
+    }
+    return res.download(filePath, fileName);
+  })
+);
+
+router.get(
   "/:id",
   asyncHandler(async (req, res) => {
     const template = await getTemplateDetail(Number(req.params.id));
     res.json(template);
+  })
+);
+
+router.delete(
+  "/:id",
+  asyncHandler(async (req, res) => {
+    const deleted = await deleteTemplate(Number(req.params.id));
+    res.json({ message: "Template deleted", template: deleted });
   })
 );
 
@@ -195,7 +227,12 @@ router.post(
     };
     const resolved = await resolveFields(template.template_json, context);
     const html = renderTemplateHtml(template.template_json, resolved.values);
-    res.json({ html, ...resolved });
+    res.json({
+      html,
+      values_json: resolved.values,
+      values_markdown: renderValuesMarkdown(resolved.values),
+      ...resolved
+    });
   })
 );
 
@@ -241,7 +278,67 @@ router.post(
 
     res.json({
       ...result,
+      download_url: result.generated_report_id ? `/templates/generated/${result.generated_report_id}/download` : null,
       warnings: resolved.warnings
+    });
+  })
+);
+
+router.post(
+  "/:id/templateize",
+  asyncHandler(async (req, res) => {
+    const template = await getTemplateDetail(Number(req.params.id));
+    const context = {
+      customer_id: req.body.customer_id || template.customer_id,
+      monitoring_start: req.body.monitoring_start,
+      monitoring_end: req.body.monitoring_end,
+      report_month: req.body.report_month,
+      report_year: req.body.report_year,
+      overrides: req.body.overrides || {}
+    };
+    const resolved = await resolveFields(template.template_json, context);
+    const dir = path.join(config.uploadDir, "templates");
+    await fs.promises.mkdir(dir, { recursive: true });
+    const filename = `templateized_${template.id}_${Date.now()}.docx`;
+    const outputPath = path.join(dir, filename);
+    const result = await createTemplateizedDocx({
+      templateJson: template.template_json,
+      values: resolved.values,
+      outputPath
+    });
+
+    const canUseAsSource = result.placeholder_files_after > 0;
+
+    if (req.body.set_as_source !== false && canUseAsSource) {
+      const nextJson = {
+        ...template.template_json,
+        source_files: [
+          {
+            role: "main_report",
+            file_name: filename,
+            file_path: outputPath,
+            generated_from: template.template_json.source_files?.[0]?.file_path || null,
+            templateized_at: new Date().toISOString()
+          },
+          ...(template.template_json.source_files || []).filter((file) => file.role !== "main_report")
+        ]
+      };
+      await pool.query(
+        `UPDATE report_templates
+         SET source_docx_path = $1, template_json = $2, updated_at = NOW()
+         WHERE id = $3`,
+        [outputPath, JSON.stringify(nextJson), template.id]
+      );
+    }
+
+    res.json({
+      message: "Templateized DOCX created",
+      file_name: filename,
+      file_path: outputPath,
+      download_url: `/templates/templateized/${encodeURIComponent(filename)}/download`,
+      set_as_source: req.body.set_as_source !== false && canUseAsSource,
+      can_use_as_source: canUseAsSource,
+      ...result
     });
   })
 );

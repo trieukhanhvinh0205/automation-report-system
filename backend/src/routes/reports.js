@@ -18,7 +18,7 @@ const { generateElkCasesDocx } = require("../utils/reportGenerator");
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 //ELK
-const { getElkReports } = require("../services/elkService");
+const { getElkFilterOptions, getElkReports, searchElkReports } = require("../services/elkService");
 
 router.get(
   "/",
@@ -32,14 +32,35 @@ router.get(
   "/elk",
   asyncHandler(async (req, res) => {
     const filters = { ...req.query };
-    if (filters.size) {
-      filters.size = Number(filters.size);
-    }
-    const data = await getElkReports({
+    const size = Math.min(Math.max(Number(filters.size || 10), 1), 500);
+    const page = Math.max(Number(filters.page || 1), 1);
+    delete filters.page;
+
+    const data = await searchElkReports({
       ...filters
+      ,
+      size,
+      from: (page - 1) * size
     });
 
-    res.json(data);
+    res.json({
+      rows: data.rows,
+      total: data.total,
+      page,
+      size,
+      totalPages: Math.max(1, Math.ceil(data.total / size))
+    });
+  })
+);
+
+router.get(
+  "/elk/options",
+  asyncHandler(async (req, res) => {
+    const filters = { ...req.query };
+    delete filters.page;
+    delete filters.size;
+    const options = await getElkFilterOptions(filters);
+    res.json(options);
   })
 );
 

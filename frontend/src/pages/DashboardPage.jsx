@@ -13,6 +13,7 @@ import {
   exportElkWord,
   exportReport,
   getElkAlerts,
+  getElkFilterOptions,
   getReport,
   listReports,
   updateReport
@@ -24,10 +25,17 @@ function DashboardPage() {
   const [reports, setReports] = useState([]);
   const [selectedReport, setSelectedReport] = useState(null);
   const [elkAlerts, setElkAlerts] = useState([]);
+  const [elkMeta, setElkMeta] = useState({ total: 0, page: 1, size: 10, totalPages: 1 });
   const [elkQuery, setElkQuery] = useState({});
   const [loadingElk, setLoadingElk] = useState(false);
   const [elkError, setElkError] = useState("");
   const [elkLastUpdated, setElkLastUpdated] = useState(null);
+  const [elkFilterOptions, setElkFilterOptions] = useState({
+    tenants: [],
+    analysts: [],
+    severities: [],
+    priorities: []
+  });
   const [message, setMessage] = useState("");
   const [loadingCreate, setLoadingCreate] = useState(false);
   const [loadingAction, setLoadingAction] = useState(false);
@@ -48,7 +56,15 @@ function DashboardPage() {
     setLoadingElk(true);
     try {
       const data = await getElkAlerts(query);
-      setElkAlerts(data);
+      const options = await getElkFilterOptions(query);
+      setElkAlerts(data.rows);
+      setElkFilterOptions(options);
+      setElkMeta({
+        total: data.total,
+        page: data.page,
+        size: data.size,
+        totalPages: data.totalPages
+      });
       setElkError("");
       setElkLastUpdated(new Date().toISOString());
     } catch (err) {
@@ -181,6 +197,8 @@ function DashboardPage() {
         ) : activeView === "elk" ? (
           <ElkDashboard
             alerts={elkAlerts}
+            meta={elkMeta}
+            filterOptions={elkFilterOptions}
             loading={loadingElk}
             error={elkError}
             onRefresh={loadElkAlerts}

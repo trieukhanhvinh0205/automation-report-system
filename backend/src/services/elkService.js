@@ -35,6 +35,7 @@ function buildElkQuery({
   minOpenToDetectedMinutes,
   maxOpenToDetectedMinutes,
   q,
+  from = 0,
   size = 200
 }) {
   const must = [];
@@ -47,20 +48,24 @@ function buildElkQuery({
     filter.push({ range: { "@timestamp": range } });
   }
 
-  if (severity) {
-    filter.push({ term: { "severity.keyword": severity } });
+  const severityList = parseList(severity);
+  if (severityList.length > 0) {
+    filter.push({ terms: { "severity.keyword": severityList } });
   }
 
-  if (tenant) {
-    filter.push({ term: { "tenant.keyword": tenant } });
+  const tenantList = parseList(tenant);
+  if (tenantList.length > 0) {
+    filter.push({ terms: { "tenant.keyword": tenantList } });
   }
 
-  if (analyst) {
-    filter.push({ term: { "user_closed_case.keyword": analyst } });
+  const analystList = parseList(analyst);
+  if (analystList.length > 0) {
+    filter.push({ terms: { "user_closed_case.keyword": analystList } });
   }
 
-  if (priority) {
-    filter.push({ term: { "priority.keyword": priority } });
+  const priorityList = parseList(priority);
+  if (priorityList.length > 0) {
+    filter.push({ terms: { "priority.keyword": priorityList } });
   }
 
   if (resolution) {
@@ -99,8 +104,9 @@ function buildElkQuery({
     filter.push({ term: { "siem_alert_id.keyword": siemAlertId } });
   }
 
-  if (tenantId) {
-    filter.push({ term: { "tenant.keyword": tenantId } });
+  const tenantIdList = parseList(tenantId);
+  if (tenantIdList.length > 0) {
+    filter.push({ terms: { "tenant.keyword": tenantIdList } });
   }
 
   if (reasonCloseCase) {
@@ -130,10 +136,7 @@ function buildElkQuery({
   }
 
   if (tactics) {
-    const tacticList = String(tactics)
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
+    const tacticList = parseList(tactics);
     if (tacticList.length > 0) {
       filter.push({
         terms: { "mitre_tactic.keyword": tacticList }
@@ -142,10 +145,7 @@ function buildElkQuery({
   }
 
   if (techniques) {
-    const techniqueList = String(techniques)
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
+    const techniqueList = parseList(techniques);
     if (techniqueList.length > 0) {
       filter.push({
         terms: { "mitre_technique.keyword": techniqueList }
@@ -214,6 +214,8 @@ function buildElkQuery({
   }
 
   return {
+    track_total_hits: true,
+    from: Number(from || 0),
     size,
     sort: [{ "@timestamp": { order: "desc" } }],
     query: {
@@ -223,6 +225,15 @@ function buildElkQuery({
       }
     }
   };
+}
+
+function parseList(value) {
+  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
+  if (value === null || value === undefined || value === "") return [];
+  return String(value)
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 function mapElkItem(item) {
@@ -290,8 +301,54 @@ async function searchElkReports(filters = {}) {
   }
 }
 
+async function getElkFilterOptions(filters = {}) {
+  try {
+    const query = buildElkQuery({ ...filters, from: 0, size: 0 });
+    query.aggs = {
+      tenants: { terms: { field: "tenant.keyword", size: 1000 } },
+      analysts: { terms: { field: "user_closed_case.keyword", size: 1000 } },
+      severities: { terms: { field: "severity.keyword", size: 100 } },
+      priorities: { terms: { field: "priority.keyword", size: 100 } },
+      locations: { terms: { field: "location.keyword", size: 100 } }
+    };
+
+    const response = await axios.post(
+      `${process.env.ELK_URL}/${process.env.ELK_INDEX}/_search`,
+      query,
+      {
+        auth: {
+          username: process.env.ELK_USERNAME,
+          password: process.env.ELK_PASSWORD
+        },
+        headers: {
+          "Content-Type": "application/json"
+        },
+        httpsAgent: new https.Agent({
+          rejectUnauthorized: false
+        })
+      }
+    );
+
+    return {
+      tenants: bucketsToValues(response.data.aggregations?.tenants?.buckets),
+      analysts: bucketsToValues(response.data.aggregations?.analysts?.buckets),
+      severities: bucketsToValues(response.data.aggregations?.severities?.buckets),
+      priorities: bucketsToValues(response.data.aggregations?.priorities?.buckets),
+      locations: bucketsToValues(response.data.aggregations?.locations?.buckets)
+    };
+  } catch (error) {
+    console.error("ELK OPTIONS ERROR:", error.response?.data || error.message);
+    throw error;
+  }
+}
+
+function bucketsToValues(buckets = []) {
+  return buckets.map((bucket) => String(bucket.key)).filter(Boolean);
+}
+
 module.exports = {
   buildElkQuery,
+  getElkFilterOptions,
   getElkReports,
   searchElkReports
 };

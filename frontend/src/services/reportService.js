@@ -31,7 +31,35 @@ export async function getElkAlerts(filters = {}) {
   const response = await apiClient.get("/reports/elk", {
     params: filters
   });
-  return Array.isArray(response.data) ? response.data : [];
+  if (Array.isArray(response.data)) {
+    return {
+      rows: response.data,
+      total: response.data.length,
+      page: 1,
+      size: response.data.length || 10,
+      totalPages: 1
+    };
+  }
+  return {
+    rows: response.data.rows || [],
+    total: Number(response.data.total || 0),
+    page: Number(response.data.page || 1),
+    size: Number(response.data.size || filters.size || 10),
+    totalPages: Number(response.data.totalPages || 1)
+  };
+}
+
+export async function getElkFilterOptions(filters = {}) {
+  const response = await apiClient.get("/reports/elk/options", {
+    params: filters
+  });
+  return {
+    tenants: response.data.tenants || [],
+    analysts: response.data.analysts || [],
+    severities: response.data.severities || [],
+    priorities: response.data.priorities || [],
+    locations: response.data.locations || []
+  };
 }
 
 export async function exportElkWord(filters = {}) {

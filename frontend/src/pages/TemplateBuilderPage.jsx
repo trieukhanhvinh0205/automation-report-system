@@ -1,10 +1,15 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { renderAsync } from "docx-preview";
 import {
   createTemplate,
+  deleteTemplate,
+  downloadGeneratedTemplateReport,
   exportTemplate,
   getTemplate,
+  listCustomers,
   listTemplates,
   previewTemplate,
+  templateizeTemplate,
   updateTemplateFieldMapping,
   updateTemplateLayout,
   updateTemplateSection,
@@ -16,6 +21,7 @@ const STEP_LABELS = ["Upload", "Review", "Builder", "Mapping", "Preview"];
 function TemplateBuilderPage() {
   const [step, setStep] = useState(0);
   const [templates, setTemplates] = useState([]);
+  const [customers, setCustomers] = useState([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [draft, setDraft] = useState(null);
   const [templateDetail, setTemplateDetail] = useState(null);
@@ -37,6 +43,9 @@ function TemplateBuilderPage() {
 
   useEffect(() => {
     refreshTemplates().catch(() => setMessage("Không tải được danh sách template"));
+    listCustomers()
+      .then((data) => setCustomers(data))
+      .catch(() => setMessage("Không tải được danh sách khách hàng"));
   }, []);
 
   async function handleUpload(payload) {
@@ -87,24 +96,74 @@ function TemplateBuilderPage() {
     }
   }
 
+  async function handleDeleteTemplate(templateId) {
+    if (!templateId) return;
+    const selected = templates.find((template) => String(template.id) === String(templateId));
+    if (!window.confirm(`Xóa template "${selected?.name || templateId}"?`)) return;
+
+    setBusy(true);
+    try {
+      await deleteTemplate(templateId);
+      await refreshTemplates();
+      if (String(selectedTemplateId) === String(templateId)) {
+        setSelectedTemplateId("");
+        setTemplateDetail(null);
+        setDraft(null);
+        setStep(0);
+      }
+      setMessage("Đã xóa template");
+    } catch (err) {
+      setMessage(err.response?.data?.message || "Xóa template thất bại");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="template-shell">
-      <div className="template-toolbar panel">
-        <div>
-          <h3>Template Builder</h3>
-          <p className="muted">Upload DOCX, review extraction, kéo thả section, mapping datasource và preview/export.</p>
+      <div className="template-manager panel">
+        <div className="template-manager-head">
+          <div>
+            <h3>Template Builder</h3>
+            <p className="muted">Quản lý mẫu Word, mapping dữ liệu ELK/PostgreSQL và xuất báo cáo SOC theo kỳ.</p>
+          </div>
+          <button className="ghost" type="button" onClick={() => setStep(0)}>
+            New Template
+          </button>
         </div>
-        <label>
-          Existing templates
-          <select value={selectedTemplateId} onChange={(event) => handleSelectTemplate(event.target.value)}>
-            <option value="">Chọn template</option>
-            {templates.map((template) => (
-              <option key={template.id} value={template.id}>
-                #{template.id} - {template.name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="template-list">
+          {templates.length === 0 && <span className="muted tiny">Chưa có template.</span>}
+          {templates.map((template) => (
+            <button
+              className={`template-list-item ${String(selectedTemplateId) === String(template.id) ? "active" : ""}`}
+              type="button"
+              key={template.id}
+              onClick={() => handleSelectTemplate(String(template.id))}
+            >
+              <span>
+                <strong>{template.name}</strong>
+                <small>#{template.id} · {template.template_type}</small>
+              </span>
+              <span
+                className="delete-template"
+                role="button"
+                tabIndex={0}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleDeleteTemplate(template.id);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.stopPropagation();
+                    handleDeleteTemplate(template.id);
+                  }
+                }}
+              >
+                Delete
+              </span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {message && <div className="notice">{message}</div>}
@@ -123,7 +182,7 @@ function TemplateBuilderPage() {
         ))}
       </div>
 
-      {step === 0 && <TemplateUploadPage onUpload={handleUpload} busy={busy} />}
+      {step === 0 && <TemplateUploadPage onUpload={handleUpload} busy={busy} customers={customers} />}
       {step === 1 && (
         <TemplateExtractReviewPage
           draft={draft}
@@ -149,15 +208,27 @@ function TemplateBuilderPage() {
           onSaved={(text) => setMessage(text)}
         />
       )}
-      {step === 4 && <ReportPreviewPage templateDetail={templateDetail} draft={draft} />}
+      {step === 4 && (
+        <ReportPreviewPage
+          templateDetail={templateDetail}
+          draft={draft}
+          onReload={() => loadTemplate(selectedTemplateId)}
+        />
+      )}
     </div>
   );
 }
 
-function TemplateUploadPage({ onUpload, busy }) {
+function TemplateUploadPage({ onUpload, busy, customers = [] }) {
   const [name, setName] = useState("PVOIL Monthly SOC Report");
-  const [customerId, setCustomerId] = useState("1");
+  const [customerId, setCustomerId] = useState("");
   const [files, setFiles] = useState([]);
+
+  useEffect(() => {
+    if (!customerId && customers.length > 0) {
+      setCustomerId(String(customers[0].id));
+    }
+  }, [customers, customerId]);
 
   function submit(event) {
     event.preventDefault();
@@ -175,8 +246,15 @@ function TemplateUploadPage({ onUpload, busy }) {
         <input value={name} onChange={(event) => setName(event.target.value)} required />
       </label>
       <label>
-        Customer ID
-        <input value={customerId} onChange={(event) => setCustomerId(event.target.value)} />
+        Customer
+        <select value={customerId} onChange={(event) => setCustomerId(event.target.value)} required>
+          {customers.length === 0 && <option value="">Chưa có customer</option>}
+          {customers.map((customer) => (
+            <option key={customer.id} value={customer.id}>
+              {customer.code} - {customer.full_name || customer.name}
+            </option>
+          ))}
+        </select>
       </label>
       <label className="template-file-input">
         Upload DOCX
@@ -283,6 +361,27 @@ function ReportBuilderPage({ templateDetail, draft, onDraftChange, onReload, onS
     onDraftChange({ ...draft, sections });
   }
 
+  function addSection() {
+    const sectionKey = `custom_section_${Date.now()}`;
+    const sections = [
+      ...(draft.sections || []),
+      {
+        section_key: sectionKey,
+        title: "Section mới",
+        section_type: "text",
+        order_index: (draft.sections || []).length + 1,
+        is_enabled: true,
+        content_template: "Nhập nội dung section tại đây.",
+        config: { show_title: true }
+      }
+    ];
+    onDraftChange({
+      ...draft,
+      sections,
+      layout: { ...(draft.layout || {}), sections_order: sections.map((section) => section.section_key) }
+    });
+  }
+
   async function saveSection(section) {
     if (!templateId) return;
     await updateTemplateSection(templateId, section.section_key, section);
@@ -301,18 +400,23 @@ function ReportBuilderPage({ templateDetail, draft, onDraftChange, onReload, onS
   }
 
   return (
-    <div className="builder-layout">
-      <section className="panel">
+    <div className="resume-builder-layout">
+      <section className="panel section-editor-panel">
         <div className="row-between">
-          <h3>Drag-Drop Sections</h3>
-          <button className="primary" type="button" onClick={saveLayout} disabled={!templateId}>
-            Save Layout
-          </button>
+          <h3>Sections</h3>
+          <div className="button-row">
+            <button className="ghost" type="button" onClick={addSection}>
+              Add Section
+            </button>
+            <button className="primary" type="button" onClick={saveLayout} disabled={!templateId}>
+              Save Layout
+            </button>
+          </div>
         </div>
         <div className="section-sort-list">
           {(draft.sections || []).map((section, index) => (
-            <div
-              className="section-sort-item"
+            <article
+              className={`section-editor-card ${section.is_enabled === false ? "disabled" : ""}`}
               draggable
               key={section.section_key}
               onDragStart={() => setDragIndex(index)}
@@ -322,39 +426,57 @@ function ReportBuilderPage({ templateDetail, draft, onDraftChange, onReload, onS
                 setDragIndex(null);
               }}
             >
-              <span className="drag-handle">::</span>
-              <label className="check-row compact">
-                <input
-                  type="checkbox"
-                  checked={section.is_enabled !== false}
-                  onChange={(event) => updateSectionLocal(index, { is_enabled: event.target.checked })}
-                />
-              </label>
-              <input value={section.title || ""} onChange={(event) => updateSectionLocal(index, { title: event.target.value })} />
-              <button className="ghost" type="button" onClick={() => saveSection(section)} disabled={!templateId}>
-                Save
-              </button>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="panel">
-        <h3>Section Content</h3>
-        <div className="content-editor-list">
-          {(draft.sections || []).map((section, index) => (
-            <label key={section.section_key}>
-              {section.title}
+              <div className="section-card-head">
+                <span className="drag-handle">::</span>
+                <label className="check-row compact">
+                  <input
+                    type="checkbox"
+                    checked={section.is_enabled !== false}
+                    onChange={(event) => updateSectionLocal(index, { is_enabled: event.target.checked })}
+                  />
+                </label>
+                <input value={section.title || ""} onChange={(event) => updateSectionLocal(index, { title: event.target.value })} />
+                <select
+                  value={section.section_type}
+                  onChange={(event) => updateSectionLocal(index, { section_type: event.target.value })}
+                >
+                  <option value="text">text</option>
+                  <option value="table">table</option>
+                  <option value="cover">cover</option>
+                  <option value="toc">toc</option>
+                  <option value="appendix_list">appendix_list</option>
+                </select>
+                <button className="ghost" type="button" onClick={() => saveSection(section)} disabled={!templateId}>
+                  Save
+                </button>
+              </div>
               <textarea
-                rows={4}
+                rows={5}
                 value={section.content_template || ""}
                 onChange={(event) => updateSectionLocal(index, { content_template: event.target.value })}
                 placeholder="Dùng placeholder như {{customer_full_name}}, {{monitoring_period}}..."
               />
-            </label>
+            </article>
           ))}
         </div>
       </section>
+
+      <section className="builder-preview-stage">
+        <div className="word-preview-toolbar">
+          <strong>Live Word Layout</strong>
+          <span className="muted tiny">A4 preview từ section đang edit</span>
+        </div>
+        <WordLikeHtmlPreview draft={draft} />
+      </section>
+    </div>
+  );
+}
+
+function WordLikeHtmlPreview({ draft, html }) {
+  const content = html || renderDraftHtml(draft);
+  return (
+    <div className="word-stage">
+      <div className="word-page" dangerouslySetInnerHTML={{ __html: content }} />
     </div>
   );
 }
@@ -447,8 +569,9 @@ function FieldMappingPage({ templateDetail, draft, onReload, onSaved }) {
   );
 }
 
-function ReportPreviewPage({ templateDetail, draft }) {
+function ReportPreviewPage({ templateDetail, draft, onReload }) {
   const templateId = templateDetail?.id;
+  const wordPreviewRef = useRef(null);
   const defaultStart = "2026-04-30T00:00:00.000Z";
   const defaultEnd = "2026-05-31T23:59:59.999Z";
   const [context, setContext] = useState({
@@ -460,6 +583,9 @@ function ReportPreviewPage({ templateDetail, draft }) {
     overrides: { security_status: "An toàn" }
   });
   const [preview, setPreview] = useState(null);
+  const [activePreviewTab, setActivePreviewTab] = useState("fields");
+  const [fieldViewMode, setFieldViewMode] = useState("markdown");
+  const [wordPreviewReady, setWordPreviewReady] = useState(false);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -469,6 +595,7 @@ function ReportPreviewPage({ templateDetail, draft }) {
     try {
       const data = await previewTemplate(templateId, context);
       setPreview(data);
+      setActivePreviewTab("fields");
       setMessage(data.errors?.length ? "Preview có lỗi field bắt buộc" : "Preview đã render");
     } catch (err) {
       setMessage(err.response?.data?.message || "Preview thất bại");
@@ -477,14 +604,49 @@ function ReportPreviewPage({ templateDetail, draft }) {
     }
   }
 
-  async function runExport(format) {
+  async function runExport(format, renderWordPreview = false) {
     if (!templateId) return;
     setBusy(true);
     try {
       const data = await exportTemplate(templateId, { ...context, format });
+      if (renderWordPreview && data.download_url && wordPreviewRef.current) {
+        const blob = await downloadGeneratedTemplateReport(data.download_url);
+        wordPreviewRef.current.innerHTML = "";
+        await renderAsync(blob, wordPreviewRef.current, null, {
+          className: "docx-rendered",
+          inWrapper: false,
+          ignoreWidth: false,
+          ignoreHeight: false,
+          renderHeaders: true,
+          renderFooters: true
+        });
+        setWordPreviewReady(true);
+        setActivePreviewTab("format");
+      }
       setMessage(`Export thành công: ${data.file_name || data.file_path}`);
     } catch (err) {
       setMessage(err.response?.data?.message || "Export thất bại");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runTemplateize() {
+    if (!templateId) return;
+    setBusy(true);
+    try {
+      const data = await templateizeTemplate(templateId, {
+        ...context,
+        set_as_source: true
+      });
+      const quality =
+        data.can_use_as_source
+          ? "Đã cấy placeholder vào DOCX."
+          : "Chưa cấy được placeholder; file này KHÔNG được dùng làm source export để tránh xuất sai báo cáo cũ.";
+      setMessage(`Đã tạo DOCX template: ${data.file_name}. ${quality}`);
+      if (data.can_use_as_source && onReload) await onReload();
+    } catch (err) {
+      setMessage(err.response?.data?.message || "Tạo DOCX template thất bại");
     } finally {
       setBusy(false);
     }
@@ -496,6 +658,13 @@ function ReportPreviewPage({ templateDetail, draft }) {
     <div className="preview-layout">
       <section className="panel preview-controls">
         <h3>Preview Context</h3>
+        <div className="workflow-note">
+          <strong>Quy trình đúng</strong>
+          <span>
+            1. Preview để kiểm tra fields:value. 2. Create DOCX Template nếu file gốc là báo cáo tay cũ.
+            3. Generate Word Preview để xem file Word sau merge. 4. Export DOCX khi đã ổn.
+          </span>
+        </div>
         <label>
           Customer ID
           <input value={context.customer_id} onChange={(event) => setContext({ ...context, customer_id: event.target.value })} />
@@ -532,10 +701,16 @@ function ReportPreviewPage({ templateDetail, draft }) {
           <button className="primary" type="button" onClick={runPreview} disabled={!templateId || busy}>
             Preview
           </button>
-          <button className="ghost" type="button" onClick={() => runExport("docx")} disabled={!templateId || busy}>
+          <button className="ghost" type="button" onClick={runTemplateize} disabled={!templateId || busy}>
+            Create DOCX Template
+          </button>
+          <button className="ghost" type="button" onClick={() => runExport("docx", true)} disabled={!templateId || busy}>
+            Generate Word Preview
+          </button>
+          <button className="ghost" type="button" onClick={() => runExport("docx", false)} disabled={!templateId || busy}>
             Export DOCX
           </button>
-          <button className="ghost" type="button" onClick={() => runExport("xlsx")} disabled={!templateId || busy}>
+          <button className="ghost" type="button" onClick={() => runExport("xlsx", false)} disabled={!templateId || busy}>
             Export XLSX
           </button>
         </div>
@@ -543,7 +718,63 @@ function ReportPreviewPage({ templateDetail, draft }) {
         {preview?.warnings?.length > 0 && <pre className="json-box">{JSON.stringify(preview.warnings, null, 2)}</pre>}
         {preview?.errors?.length > 0 && <pre className="json-box error-box">{JSON.stringify(preview.errors, null, 2)}</pre>}
       </section>
-      <section className="panel report-canvas" dangerouslySetInnerHTML={{ __html: preview?.html || "<p>Chưa render preview.</p>" }} />
+      <section className="panel report-canvas">
+        <div className="preview-tabs">
+          <button
+            className={`step-pill ${activePreviewTab === "fields" ? "active" : ""}`}
+            type="button"
+            onClick={() => setActivePreviewTab("fields")}
+          >
+            Fields Value
+          </button>
+          <button
+            className={`step-pill ${activePreviewTab === "format" ? "active" : ""}`}
+            type="button"
+            onClick={() => setActivePreviewTab("format")}
+          >
+            Word Preview
+          </button>
+        </div>
+
+        {activePreviewTab === "fields" ? (
+          <div className="fields-preview">
+            <div className="button-row">
+              <button
+                className={`ghost ${fieldViewMode === "markdown" ? "active-soft" : ""}`}
+                type="button"
+                onClick={() => setFieldViewMode("markdown")}
+              >
+                Markdown
+              </button>
+              <button
+                className={`ghost ${fieldViewMode === "json" ? "active-soft" : ""}`}
+                type="button"
+                onClick={() => setFieldViewMode("json")}
+              >
+                JSON
+              </button>
+            </div>
+            <pre className="json-box values-box">
+              {preview
+                ? fieldViewMode === "json"
+                  ? JSON.stringify(preview.values_json || preview.values || {}, null, 2)
+                  : preview.values_markdown || "# Resolved Fields\n\nChưa có dữ liệu."
+                : "Bấm Preview để xem fields:value trước khi merge vào template."}
+            </pre>
+          </div>
+        ) : (
+          <div className="format-preview">
+            <div className="word-preview-hint">
+              <strong>DOCX render preview</strong>
+              <span className="muted tiny">
+                Bấm Generate Word Preview để merge dữ liệu vào DOCX gốc và render ngay tại đây.
+              </span>
+            </div>
+            <div ref={wordPreviewRef} className={`docx-preview-host ${wordPreviewReady ? "ready" : ""}`} />
+            {!wordPreviewReady && <WordLikeHtmlPreview draft={draft} html={preview?.html} />}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
@@ -570,6 +801,36 @@ function formatSourceConfig(value) {
 function formatInputValue(value) {
   if (value === null || value === undefined) return "";
   return typeof value === "object" ? JSON.stringify(value) : String(value);
+}
+
+function renderDraftHtml(draft) {
+  const sections = [...(draft?.sections || [])]
+    .filter((section) => section.is_enabled !== false)
+    .sort((a, b) => Number(a.order_index || 0) - Number(b.order_index || 0));
+
+  if (sections.length === 0) {
+    return "<p class=\"muted\">Chưa có section nào.</p>";
+  }
+
+  return sections
+    .map((section) => {
+      const title = section.config?.show_title === false ? "" : `<h2>${escapeHtml(section.title || section.section_key)}</h2>`;
+      if (["table", "appendix_list"].includes(section.section_type)) {
+        return `<section class="report-section">${title}<table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>${escapeHtml(section.data_binding?.field_key || section.section_key)}</td><td>{{${escapeHtml(section.data_binding?.field_key || section.section_key)}}}</td></tr></tbody></table></section>`;
+      }
+      const content = escapeHtml(section.content_template || "").replace(/\n/g, "<br />");
+      return `<section class="report-section ${section.section_type === "cover" ? "report-cover" : ""}">${title}<p>${content}</p></section>`;
+    })
+    .join("");
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function syncReportPeriod(nextContext) {

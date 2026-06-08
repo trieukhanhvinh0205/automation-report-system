@@ -622,6 +622,9 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
         });
         setWordPreviewReady(true);
         setActivePreviewTab("format");
+      } else if (data.download_url) {
+        const blob = await downloadGeneratedTemplateReport(data.download_url);
+        downloadBlob(blob, data.file_name || `report.${format}`);
       }
       setMessage(`Export thành công: ${data.file_name || data.file_path}`);
     } catch (err) {
@@ -635,7 +638,7 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
     if (!templateId) return;
     setBusy(true);
     try {
-      const data = await templateizeTemplate(templateId, {
+      const data = await  templateizeTemplate(templateId, {
         ...context,
         set_as_source: true
       });
@@ -801,6 +804,17 @@ function formatSourceConfig(value) {
 function formatInputValue(value) {
   if (value === null || value === undefined) return "";
   return typeof value === "object" ? JSON.stringify(value) : String(value);
+}
+
+function downloadBlob(blob, fileName) {
+  const blobUrl = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = blobUrl;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(blobUrl);
 }
 
 function renderDraftHtml(draft) {

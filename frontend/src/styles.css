@@ -104,6 +104,29 @@ textarea {
   font-size: 14px;
 }
 
+.fluent-loading {
+  min-height: 140px;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.fluent-empty {
+  display: grid;
+  gap: 4px;
+  color: #64748b;
+  padding: 14px 0;
+}
+
+.fluent-file-input {
+  width: 100%;
+  min-height: 32px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 7px 8px;
+  background: #ffffff;
+}
+
 .dashboard-layout {
   min-height: 100vh;
   display: grid;

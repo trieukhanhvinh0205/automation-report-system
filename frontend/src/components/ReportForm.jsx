@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Button, Card, Field, Input, Select, Textarea } from "@fluentui/react-components";
 
 function ReportForm({ onCreate, loading }) {
   const [title, setTitle] = useState("");
@@ -44,69 +45,48 @@ function ReportForm({ onCreate, loading }) {
   }
 
   return (
-    <section className="panel">
+    <Card className="panel">
       <h3>Create Report</h3>
       <form onSubmit={handleSubmit} className="stack">
-        <input
-          placeholder="Report title"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          required
-        />
+        <Field label="Report title" required>
+          <Input value={title} onChange={(_, data) => setTitle(data.value)} required />
+        </Field>
 
-        <input
-          placeholder="Description"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
+        <Field label="Description">
+          <Input value={description} onChange={(_, data) => setDescription(data.value)} />
+        </Field>
 
-        <div className="source-switch">
-          <button
-            className={source === "manual" ? "active" : ""}
-            type="button"
-            onClick={() => setSource("manual")}
-          >
-            Manual
-          </button>
-          <button
-            className={source === "excel" ? "active" : ""}
-            type="button"
-            onClick={() => setSource("excel")}
-          >
-            Excel
-          </button>
-          <button
-            className={source === "soar" ? "active" : ""}
-            type="button"
-            onClick={() => setSource("soar")}
-          >
-            SOAR (Mock)
-          </button>
-        </div>
+        <Field label="Datasource">
+          <Select value={source} onChange={(event) => setSource(event.target.value)}>
+            <option value="manual">Manual</option>
+            <option value="excel">Excel</option>
+            <option value="soar">SOAR (Mock)</option>
+          </Select>
+        </Field>
 
         {source === "manual" && (
-          <textarea
-            rows={4}
-            placeholder="Manual input"
-            value={manualText}
-            onChange={(e) => setManualText(e.target.value)}
-          />
+          <Field label="Manual input">
+            <Textarea rows={4} value={manualText} onChange={(_, data) => setManualText(data.value)} />
+          </Field>
         )}
 
         {source === "excel" && (
-          <input
-            type="file"
-            accept=".xlsx,.xls"
-            onChange={(e) => setExcelFile(e.target.files?.[0] || null)}
-            required
-          />
+          <Field label="Excel file" required>
+            <input
+              className="fluent-file-input"
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={(e) => setExcelFile(e.target.files?.[0] || null)}
+              required
+            />
+          </Field>
         )}
 
-        <button className="primary" type="submit" disabled={loading}>
+        <Button appearance="primary" type="submit" disabled={loading}>
           {loading ? "Creating..." : "Create & Preview"}
-        </button>
+        </Button>
       </form>
-    </section>
+    </Card>
   );
 }
 

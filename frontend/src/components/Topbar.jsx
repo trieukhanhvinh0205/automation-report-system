@@ -1,8 +1,10 @@
+import { Text, Title1 } from "@fluentui/react-components";
+
 function Topbar({ title, subtitle }) {
   return (
     <header className="topbar">
-      <h1>{title}</h1>
-      <p>{subtitle}</p>
+      <Title1>{title}</Title1>
+      <Text color="secondary">{subtitle}</Text>
     </header>
   );
 }

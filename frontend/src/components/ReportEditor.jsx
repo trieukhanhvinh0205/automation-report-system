@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { Button, Card, Select, Textarea } from "@fluentui/react-components";
+import { AppMessage, EmptyState } from "./ui/Feedback";
 
 function ReportEditor({ report, onSave, onExport, onDownload, actionLoading }) {
   const [text, setText] = useState("{}");
@@ -11,10 +13,10 @@ function ReportEditor({ report, onSave, onExport, onDownload, actionLoading }) {
 
   if (!report) {
     return (
-      <section className="panel">
+      <Card className="panel">
         <h3>Preview</h3>
-        <p className="muted">Select a report to preview and edit.</p>
-      </section>
+        <EmptyState title="Select a report" description="Preview, edit and export report content here." />
+      </Card>
     );
   }
 
@@ -39,28 +41,28 @@ function ReportEditor({ report, onSave, onExport, onDownload, actionLoading }) {
   }
 
   return (
-    <section className="panel">
+    <Card className="panel">
       <div className="row-between">
         <h3>Preview & Edit</h3>
         <span className="muted">#{report.id}</span>
       </div>
 
-      <textarea rows={14} value={text} onChange={(e) => setText(e.target.value)} />
-      {error && <div className="error">{error}</div>}
+      <Textarea rows={14} value={text} onChange={(_, data) => setText(data.value)} />
+      <AppMessage intent="error">{error}</AppMessage>
 
       <div className="actions">
-        <button className="primary" type="button" onClick={handleSave} disabled={actionLoading}>
+        <Button appearance="primary" type="button" onClick={handleSave} disabled={actionLoading}>
           Save
-        </button>
-        <select value={format} onChange={(e) => setFormat(e.target.value)}>
+        </Button>
+        <Select value={format} onChange={(e) => setFormat(e.target.value)}>
           <option value="docx">Word (.docx)</option>
           <option value="xlsx">Excel (.xlsx)</option>
-        </select>
-        <button className="ghost" type="button" onClick={handleExport} disabled={actionLoading}>
+        </Select>
+        <Button type="button" onClick={handleExport} disabled={actionLoading}>
           Export & Download
-        </button>
+        </Button>
       </div>
-    </section>
+    </Card>
   );
 }
 

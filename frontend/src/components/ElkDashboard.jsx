@@ -1,5 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
+import {
+  Badge,
+  Button,
+  Card,
+  Drawer,
+  DrawerBody,
+  DrawerHeader,
+  DrawerHeaderTitle,
+  Field,
+  Input,
+  MessageBar,
+  MessageBarBody,
+  Select,
+  Spinner
+} from "@fluentui/react-components";
 import { formatDate } from "../utils/format";
+import { EmptyState } from "./ui/Feedback";
 
 function toLabel(value) {
   if (value === null || value === undefined || value === "") return "Unknown";
@@ -203,26 +219,25 @@ function ElkDashboard({ alerts, meta, filterOptions, loading, error, onRefresh, 
     <div className="pagination">
       <span className="muted">Showing {pageStart}-{pageEnd} of {total}</span>
       <div className="page-actions">
-        <label className="page-size-control">
-          Rows
-          <select value={pageSize} onChange={(event) => handlePageSizeChange(event.target.value)} disabled={loading}>
+        <Field label="Rows" className="page-size-control">
+          <Select value={String(pageSize)} onChange={(event) => handlePageSizeChange(event.target.value)} disabled={loading}>
             <option value={10}>1-10</option>
             <option value={50}>1-50</option>
             <option value={100}>1-100</option>
             <option value={500}>1-500</option>
-          </select>
-        </label>
-        <button className="ghost" type="button" onClick={() => goToPage(1)} disabled={page <= 1 || loading}>First</button>
-        <button className="ghost" type="button" onClick={() => goToPage(page - 1)} disabled={page <= 1 || loading}>Prev</button>
+          </Select>
+        </Field>
+        <Button type="button" onClick={() => goToPage(1)} disabled={page <= 1 || loading}>First</Button>
+        <Button type="button" onClick={() => goToPage(page - 1)} disabled={page <= 1 || loading}>Prev</Button>
         <span className="muted">Page {page}/{totalPages}</span>
-        <button className="ghost" type="button" onClick={() => goToPage(page + 1)} disabled={page >= totalPages || loading}>Next</button>
-        <button className="ghost" type="button" onClick={() => goToPage(totalPages)} disabled={page >= totalPages || loading}>Last</button>
+        <Button type="button" onClick={() => goToPage(page + 1)} disabled={page >= totalPages || loading}>Next</Button>
+        <Button type="button" onClick={() => goToPage(totalPages)} disabled={page >= totalPages || loading}>Last</Button>
       </div>
     </div>
   );
 
   return (
-    <section className="panel elk-panel">
+    <Card className="panel elk-panel">
       <div className="row-between elk-header">
         <div>
           <h3>ELK Alert Monitoring</h3>
@@ -230,22 +245,22 @@ function ElkDashboard({ alerts, meta, filterOptions, loading, error, onRefresh, 
           <p className="muted tiny">Last updated: {lastUpdated ? formatDate(lastUpdated) : "-"}</p>
         </div>
         <div className="elk-actions">
-          <button className="ghost" type="button" onClick={handleApplyQuery} disabled={loading}>
-            {loading ? "Refreshing..." : "Apply Query"}
-          </button>
-          <button className="primary" type="button" onClick={handleExportWord} disabled={loading}>
+          <Button type="button" onClick={handleApplyQuery} disabled={loading}>
+            {loading ? <Spinner size="tiny" /> : "Apply Query"}
+          </Button>
+          <Button appearance="primary" type="button" onClick={handleExportWord} disabled={loading}>
             Export Word
-          </button>
-          <button className="ghost" type="button" onClick={resetFilters}>
+          </Button>
+          <Button type="button" onClick={resetFilters}>
             Reset Filters
-          </button>
+          </Button>
         </div>
       </div>
 
       <div className="elk-filters">
-        <input type="datetime-local" value={startTime} onChange={(event) => setStartTime(event.target.value)} />
-        <input type="datetime-local" value={endTime} onChange={(event) => setEndTime(event.target.value)} />
-        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search alert name" />
+        <Input type="datetime-local" value={startTime} onChange={(_, data) => setStartTime(data.value)} />
+        <Input type="datetime-local" value={endTime} onChange={(_, data) => setEndTime(data.value)} />
+        <Input value={search} onChange={(_, data) => setSearch(data.value)} placeholder="Search alert name" />
         <MultiSelectFilter
           label="Tenant"
           options={tenantOptions.filter((item) => item !== "all")}
@@ -277,38 +292,38 @@ function ElkDashboard({ alerts, meta, filterOptions, loading, error, onRefresh, 
       </div>
 
       <div className="advanced-toggle-row">
-        <button className="ghost" type="button" onClick={() => setShowAdvanced((prev) => !prev)}>
+        <Button type="button" onClick={() => setShowAdvanced((prev) => !prev)}>
           {showAdvanced ? "Hide Advanced Filters" : "Show Advanced Filters"}
-        </button>
+        </Button>
       </div>
 
       {showAdvanced && (
         <div className="elk-filters advanced-filters">
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+          <Select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
             <option value="all">All Status</option>
             <option value="true">true</option>
             <option value="false">false</option>
-          </select>
-          <select value={slaFilter} onChange={(event) => setSlaFilter(event.target.value)}>
+          </Select>
+          <Select value={slaFilter} onChange={(event) => setSlaFilter(event.target.value)}>
             <option value="all">All SLA</option>
             <option value="true">true</option>
             <option value="false">false</option>
-          </select>
-          <input value={platformFilter} onChange={(event) => setPlatformFilter(event.target.value)} placeholder="platform" />
-          <input value={resolutionFilter} onChange={(event) => setResolutionFilter(event.target.value)} placeholder="resolution" />
-          <input value={reasonCloseCase} onChange={(event) => setReasonCloseCase(event.target.value)} placeholder="reasonCloseCase" />
-          <input value={messageConfirmCase} onChange={(event) => setMessageConfirmCase(event.target.value)} placeholder="messageConfirmCase" />
-          <input value={soarId} onChange={(event) => setSoarId(event.target.value)} placeholder="soarId" />
-          <input value={siemAlertId} onChange={(event) => setSiemAlertId(event.target.value)} placeholder="siemAlertId" />
-          <input value={soarCaseName} onChange={(event) => setSoarCaseName(event.target.value)} placeholder="soarCaseName" />
-          <input value={tacticsFilter} onChange={(event) => setTacticsFilter(event.target.value)} placeholder="tactics (comma-separated)" />
-          <input value={techniquesFilter} onChange={(event) => setTechniquesFilter(event.target.value)} placeholder="techniques (comma-separated)" />
-          <input value={q} onChange={(event) => setQ(event.target.value)} placeholder="global search q" />
+          </Select>
+          <Input value={platformFilter} onChange={(_, data) => setPlatformFilter(data.value)} placeholder="platform" />
+          <Input value={resolutionFilter} onChange={(_, data) => setResolutionFilter(data.value)} placeholder="resolution" />
+          <Input value={reasonCloseCase} onChange={(_, data) => setReasonCloseCase(data.value)} placeholder="reasonCloseCase" />
+          <Input value={messageConfirmCase} onChange={(_, data) => setMessageConfirmCase(data.value)} placeholder="messageConfirmCase" />
+          <Input value={soarId} onChange={(_, data) => setSoarId(data.value)} placeholder="soarId" />
+          <Input value={siemAlertId} onChange={(_, data) => setSiemAlertId(data.value)} placeholder="siemAlertId" />
+          <Input value={soarCaseName} onChange={(_, data) => setSoarCaseName(data.value)} placeholder="soarCaseName" />
+          <Input value={tacticsFilter} onChange={(_, data) => setTacticsFilter(data.value)} placeholder="tactics (comma-separated)" />
+          <Input value={techniquesFilter} onChange={(_, data) => setTechniquesFilter(data.value)} placeholder="techniques (comma-separated)" />
+          <Input value={q} onChange={(_, data) => setQ(data.value)} placeholder="global search q" />
         </div>
       )}
 
       <div className="elk-stats">
-        {statEntries.length === 0 && <span className="muted">No alert data</span>}
+        {statEntries.length === 0 && <EmptyState title="No alert data" />}
         {statEntries.map(([severity, count]) => (
           <article key={severity} className="elk-stat-card">
             <span className="muted">{severity}</span>
@@ -317,7 +332,11 @@ function ElkDashboard({ alerts, meta, filterOptions, loading, error, onRefresh, 
         ))}
       </div>
 
-      {error && <div className="error">{error}</div>}
+      {error && (
+        <MessageBar intent="error">
+          <MessageBarBody>{error}</MessageBarBody>
+        </MessageBar>
+      )}
 
       {paginationControls}
 
@@ -349,7 +368,7 @@ function ElkDashboard({ alerts, meta, filterOptions, loading, error, onRefresh, 
               <tr key={item.id || `${item.alertName}-${item.timestamp}`} onClick={() => setSelectedCase(item)}>
                 <td>{formatDate(item.timestamp)}</td>
                 <td>{item.alertName || "-"}</td>
-                <td><span className={`badge ${toSeverityClass(item.severity)}`}>{toLabel(item.severity)}</span></td>
+                <td><Badge className={`badge ${toSeverityClass(item.severity)}`}>{toLabel(item.severity)}</Badge></td>
                 <td>{toLabel(item.priority)}</td>
                 <td>{toLabel(item.tenant)}</td>
                 <td>{toLabel(item.analyst)}</td>
@@ -368,7 +387,7 @@ function ElkDashboard({ alerts, meta, filterOptions, loading, error, onRefresh, 
       {paginationControls}
 
       {selectedCase && <CaseDetailDrawer item={selectedCase} onClose={() => setSelectedCase(null)} />}
-    </section>
+    </Card>
   );
 }
 
@@ -378,22 +397,22 @@ function MultiSelectFilter({ label, options, selected, onToggle, onClear }) {
       <div className="multi-filter-head">
         <span>{label}</span>
         {selected.length > 0 && (
-          <button type="button" onClick={onClear}>
+          <Button appearance="subtle" size="small" type="button" onClick={onClear}>
             Clear
-          </button>
+          </Button>
         )}
       </div>
       <div className="multi-filter-options">
         {options.length === 0 && <span className="muted tiny">No options</span>}
         {options.map((option) => (
-          <button
+          <Button
             className={`filter-chip ${selected.includes(option) ? "active" : ""}`}
             type="button"
             key={option}
             onClick={() => onToggle(option)}
           >
             {option}
-          </button>
+          </Button>
         ))}
       </div>
     </div>
@@ -428,17 +447,20 @@ function CaseDetailDrawer({ item, onClose }) {
   ];
 
   return (
-    <div className="case-drawer-backdrop" onClick={onClose}>
-      <aside className="case-drawer" onClick={(event) => event.stopPropagation()}>
-        <div className="row-between">
-          <div>
-            <h3>Case Detail</h3>
-            <p className="muted">{item.alertName || item.soarCaseName || item.id}</p>
-          </div>
-          <button className="ghost" type="button" onClick={onClose}>
+    <Drawer open position="end" size="large" onOpenChange={(_, data) => !data.open && onClose()}>
+      <DrawerHeader>
+        <DrawerHeaderTitle
+          action={
+          <Button type="button" onClick={onClose}>
             Close
-          </button>
-        </div>
+          </Button>
+          }
+        >
+          Case Detail
+        </DrawerHeaderTitle>
+        <p className="muted">{item.alertName || item.soarCaseName || item.id}</p>
+      </DrawerHeader>
+      <DrawerBody>
         <dl className="case-detail-list">
           {fields.map(([label, value]) => (
             <div key={label}>
@@ -451,8 +473,8 @@ function CaseDetailDrawer({ item, onClose }) {
           <summary>Raw JSON</summary>
           <pre>{JSON.stringify(item, null, 2)}</pre>
         </details>
-      </aside>
-    </div>
+      </DrawerBody>
+    </Drawer>
   );
 }
 

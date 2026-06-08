@@ -1,6 +1,27 @@
 import { useEffect, useRef, useState } from "react";
 import { renderAsync } from "docx-preview";
 import {
+  Button,
+  Card,
+  Checkbox,
+  Dialog,
+  DialogActions,
+  DialogBody,
+  DialogContent,
+  DialogSurface,
+  DialogTitle,
+  DialogTrigger,
+  Field,
+  Input,
+  MessageBar,
+  MessageBarBody,
+  Select,
+  Tab,
+  TabList,
+  Text,
+  Textarea
+} from "@fluentui/react-components";
+import {
   createTemplate,
   deleteTemplate,
   downloadGeneratedTemplateReport,
@@ -15,6 +36,7 @@ import {
   updateTemplateSection,
   uploadTemplate
 } from "../services/templateService";
+import { EmptyState } from "../components/ui/Feedback";
 
 const STEP_LABELS = ["Upload", "Review", "Builder", "Mapping", "Preview"];
 
@@ -98,9 +120,6 @@ function TemplateBuilderPage() {
 
   async function handleDeleteTemplate(templateId) {
     if (!templateId) return;
-    const selected = templates.find((template) => String(template.id) === String(templateId));
-    if (!window.confirm(`Xóa template "${selected?.name || templateId}"?`)) return;
-
     setBusy(true);
     try {
       await deleteTemplate(templateId);
@@ -121,22 +140,21 @@ function TemplateBuilderPage() {
 
   return (
     <div className="template-shell">
-      <div className="template-manager panel">
+      <Card className="template-manager panel">
         <div className="template-manager-head">
           <div>
             <h3>Template Builder</h3>
-            <p className="muted">Quản lý mẫu Word, mapping dữ liệu ELK/PostgreSQL và xuất báo cáo SOC theo kỳ.</p>
+            <Text color="secondary">Quản lý mẫu Word, mapping dữ liệu ELK/PostgreSQL và xuất báo cáo SOC theo kỳ.</Text>
           </div>
-          <button className="ghost" type="button" onClick={() => setStep(0)}>
+          <Button type="button" onClick={() => setStep(0)}>
             New Template
-          </button>
+          </Button>
         </div>
         <div className="template-list">
-          {templates.length === 0 && <span className="muted tiny">Chưa có template.</span>}
+          {templates.length === 0 && <EmptyState title="Chưa có template" description="Upload DOCX để tạo mẫu báo cáo đầu tiên." />}
           {templates.map((template) => (
-            <button
+            <Card
               className={`template-list-item ${String(selectedTemplateId) === String(template.id) ? "active" : ""}`}
-              type="button"
               key={template.id}
               onClick={() => handleSelectTemplate(String(template.id))}
             >
@@ -144,43 +162,55 @@ function TemplateBuilderPage() {
                 <strong>{template.name}</strong>
                 <small>#{template.id} · {template.template_type}</small>
               </span>
-              <span
-                className="delete-template"
-                role="button"
-                tabIndex={0}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  handleDeleteTemplate(template.id);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.stopPropagation();
-                    handleDeleteTemplate(template.id);
-                  }
-                }}
-              >
-                Delete
-              </span>
-            </button>
+              <Dialog>
+                <DialogTrigger disableButtonEnhancement>
+                  <Button
+                    appearance="subtle"
+                    size="small"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    Delete
+                  </Button>
+                </DialogTrigger>
+                <DialogSurface onClick={(event) => event.stopPropagation()}>
+                  <DialogBody>
+                    <DialogTitle>Xóa template?</DialogTitle>
+                    <DialogContent>Template "{template.name}" và các mapping/layout liên quan sẽ bị xóa.</DialogContent>
+                    <DialogActions>
+                      <DialogTrigger disableButtonEnhancement>
+                        <Button appearance="secondary">Cancel</Button>
+                      </DialogTrigger>
+                      <Button
+                        appearance="primary"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDeleteTemplate(template.id);
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    </DialogActions>
+                  </DialogBody>
+                </DialogSurface>
+              </Dialog>
+            </Card>
           ))}
         </div>
-      </div>
+      </Card>
 
-      {message && <div className="notice">{message}</div>}
+      {message && (
+        <MessageBar intent="info">
+          <MessageBarBody>{message}</MessageBarBody>
+        </MessageBar>
+      )}
 
-      <div className="stepper">
+      <TabList selectedValue={String(step)} onTabSelect={(_, data) => setStep(Number(data.value))}>
         {STEP_LABELS.map((label, index) => (
-          <button
-            key={label}
-            className={`step-pill ${step === index ? "active" : ""}`}
-            type="button"
-            onClick={() => setStep(index)}
-            disabled={index > 0 && !draft}
-          >
+          <Tab key={label} value={String(index)} disabled={index > 0 && !draft}>
             {index + 1}. {label}
-          </button>
+          </Tab>
         ))}
-      </div>
+      </TabList>
 
       {step === 0 && <TemplateUploadPage onUpload={handleUpload} busy={busy} customers={customers} />}
       {step === 1 && (
@@ -240,30 +270,27 @@ function TemplateUploadPage({ onUpload, busy, customers = [] }) {
   }
 
   return (
-    <form className="panel template-grid" onSubmit={submit}>
-      <label>
-        Template Name
-        <input value={name} onChange={(event) => setName(event.target.value)} required />
-      </label>
-      <label>
-        Customer
-        <select value={customerId} onChange={(event) => setCustomerId(event.target.value)} required>
+    <Card as="form" className="panel template-grid" onSubmit={submit}>
+      <Field label="Template Name" required>
+        <Input value={name} onChange={(_, data) => setName(data.value)} required />
+      </Field>
+      <Field label="Customer" required>
+        <Select value={customerId} onChange={(event) => setCustomerId(event.target.value)} required>
           {customers.length === 0 && <option value="">Chưa có customer</option>}
           {customers.map((customer) => (
             <option key={customer.id} value={customer.id}>
               {customer.code} - {customer.full_name || customer.name}
             </option>
           ))}
-        </select>
-      </label>
-      <label className="template-file-input">
-        Upload DOCX
-        <input type="file" accept=".docx" multiple onChange={(event) => setFiles(event.target.files)} required />
-      </label>
-      <button className="primary" type="submit" disabled={busy}>
+        </Select>
+      </Field>
+      <Field label="Upload DOCX" required className="template-file-input">
+        <input className="fluent-file-input" type="file" accept=".docx" multiple onChange={(event) => setFiles(event.target.files)} required />
+      </Field>
+      <Button appearance="primary" type="submit" disabled={busy}>
         {busy ? "Extracting..." : "Extract Template"}
-      </button>
-    </form>
+      </Button>
+    </Card>
   );
 }
 
@@ -284,56 +311,53 @@ function TemplateExtractReviewPage({ draft, onChange, onSave, busy }) {
 
   return (
     <div className="template-review">
-      <section className="panel">
+      <Card className="panel">
         <div className="row-between">
           <h3>Detected Sections</h3>
-          <button className="primary" type="button" onClick={() => onSave(draft)} disabled={busy}>
+          <Button appearance="primary" type="button" onClick={() => onSave(draft)} disabled={busy}>
             Save Template
-          </button>
+          </Button>
         </div>
         <div className="review-list">
           {(draft.sections || []).map((section, index) => (
             <div className="review-item" key={section.section_key}>
-              <label className="check-row">
-                <input
-                  type="checkbox"
-                  checked={section.is_enabled !== false}
-                  onChange={(event) => updateSection(index, { is_enabled: event.target.checked })}
-                />
-                Enabled
-              </label>
-              <input value={section.section_key} onChange={(event) => updateSection(index, { section_key: event.target.value })} />
-              <input value={section.title || ""} onChange={(event) => updateSection(index, { title: event.target.value })} />
-              <select value={section.section_type} onChange={(event) => updateSection(index, { section_type: event.target.value })}>
+              <Checkbox
+                label="Enabled"
+                checked={section.is_enabled !== false}
+                onChange={(_, data) => updateSection(index, { is_enabled: Boolean(data.checked) })}
+              />
+              <Input value={section.section_key} onChange={(_, data) => updateSection(index, { section_key: data.value })} />
+              <Input value={section.title || ""} onChange={(_, data) => updateSection(index, { title: data.value })} />
+              <Select value={section.section_type} onChange={(event) => updateSection(index, { section_type: event.target.value })}>
                 <option value="text">text</option>
                 <option value="table">table</option>
                 <option value="cover">cover</option>
                 <option value="toc">toc</option>
                 <option value="appendix_list">appendix_list</option>
-              </select>
+              </Select>
             </div>
           ))}
         </div>
-      </section>
+      </Card>
 
-      <section className="panel">
+      <Card className="panel">
         <h3>Detected Fields</h3>
         <div className="review-list">
           {(draft.fields || []).map((field, index) => (
             <div className="review-item field-review" key={field.field_key}>
-              <input value={field.field_key} onChange={(event) => updateField(index, { field_key: event.target.value })} />
-              <input value={field.field_label || ""} onChange={(event) => updateField(index, { field_label: event.target.value })} />
-              <select value={field.source_type} onChange={(event) => updateField(index, { source_type: event.target.value })}>
+              <Input value={field.field_key} onChange={(_, data) => updateField(index, { field_key: data.value })} />
+              <Input value={field.field_label || ""} onChange={(_, data) => updateField(index, { field_label: data.value })} />
+              <Select value={field.source_type} onChange={(event) => updateField(index, { source_type: event.target.value })}>
                 <option value="manual">manual</option>
                 <option value="postgres">postgres</option>
                 <option value="elk">elk</option>
                 <option value="computed">computed</option>
                 <option value="ai_generated">ai_generated</option>
-              </select>
+              </Select>
             </div>
           ))}
         </div>
-      </section>
+      </Card>
     </div>
   );
 }
@@ -401,16 +425,16 @@ function ReportBuilderPage({ templateDetail, draft, onDraftChange, onReload, onS
 
   return (
     <div className="resume-builder-layout">
-      <section className="panel section-editor-panel">
+      <Card className="panel section-editor-panel">
         <div className="row-between">
           <h3>Sections</h3>
           <div className="button-row">
-            <button className="ghost" type="button" onClick={addSection}>
+            <Button type="button" onClick={addSection}>
               Add Section
-            </button>
-            <button className="primary" type="button" onClick={saveLayout} disabled={!templateId}>
+            </Button>
+            <Button appearance="primary" type="button" onClick={saveLayout} disabled={!templateId}>
               Save Layout
-            </button>
+            </Button>
           </div>
         </div>
         <div className="section-sort-list">
@@ -428,15 +452,12 @@ function ReportBuilderPage({ templateDetail, draft, onDraftChange, onReload, onS
             >
               <div className="section-card-head">
                 <span className="drag-handle">::</span>
-                <label className="check-row compact">
-                  <input
-                    type="checkbox"
-                    checked={section.is_enabled !== false}
-                    onChange={(event) => updateSectionLocal(index, { is_enabled: event.target.checked })}
-                  />
-                </label>
-                <input value={section.title || ""} onChange={(event) => updateSectionLocal(index, { title: event.target.value })} />
-                <select
+                <Checkbox
+                  checked={section.is_enabled !== false}
+                  onChange={(_, data) => updateSectionLocal(index, { is_enabled: Boolean(data.checked) })}
+                />
+                <Input value={section.title || ""} onChange={(_, data) => updateSectionLocal(index, { title: data.value })} />
+                <Select
                   value={section.section_type}
                   onChange={(event) => updateSectionLocal(index, { section_type: event.target.value })}
                 >
@@ -445,21 +466,21 @@ function ReportBuilderPage({ templateDetail, draft, onDraftChange, onReload, onS
                   <option value="cover">cover</option>
                   <option value="toc">toc</option>
                   <option value="appendix_list">appendix_list</option>
-                </select>
-                <button className="ghost" type="button" onClick={() => saveSection(section)} disabled={!templateId}>
+                </Select>
+                <Button type="button" onClick={() => saveSection(section)} disabled={!templateId}>
                   Save
-                </button>
+                </Button>
               </div>
-              <textarea
+              <Textarea
                 rows={5}
                 value={section.content_template || ""}
-                onChange={(event) => updateSectionLocal(index, { content_template: event.target.value })}
+                onChange={(_, data) => updateSectionLocal(index, { content_template: data.value })}
                 placeholder="Dùng placeholder như {{customer_full_name}}, {{monitoring_period}}..."
               />
             </article>
           ))}
         </div>
-      </section>
+      </Card>
 
       <section className="builder-preview-stage">
         <div className="word-preview-toolbar">
@@ -501,7 +522,7 @@ function FieldMappingPage({ templateDetail, draft, onReload, onSaved }) {
   }
 
   return (
-    <section className="panel">
+    <Card className="panel">
       <h3>Field Mapping</h3>
       <div className="table-wrap">
         <table>
@@ -524,7 +545,7 @@ function FieldMappingPage({ templateDetail, draft, onReload, onSaved }) {
                     <div className="muted tiny">{field.field_label}</div>
                   </td>
                   <td>
-                    <select
+                    <Select
                       value={current.source_type}
                       onChange={(event) =>
                         setEditing((prev) => ({ ...prev, [field.field_key]: { ...current, source_type: event.target.value } }))
@@ -535,29 +556,29 @@ function FieldMappingPage({ templateDetail, draft, onReload, onSaved }) {
                       <option value="elk">elk</option>
                       <option value="computed">computed</option>
                       <option value="ai_generated">ai_generated</option>
-                    </select>
+                    </Select>
                   </td>
                   <td>
-                    <input
+                    <Input
                       value={formatInputValue(current.default_value)}
-                      onChange={(event) =>
-                        setEditing((prev) => ({ ...prev, [field.field_key]: { ...current, default_value: event.target.value } }))
+                      onChange={(_, data) =>
+                        setEditing((prev) => ({ ...prev, [field.field_key]: { ...current, default_value: data.value } }))
                       }
                     />
                   </td>
                   <td>
-                    <textarea
+                    <Textarea
                       rows={3}
                       value={formatSourceConfig(current.source_config)}
-                      onChange={(event) =>
-                        setEditing((prev) => ({ ...prev, [field.field_key]: { ...current, source_config: event.target.value } }))
+                      onChange={(_, data) =>
+                        setEditing((prev) => ({ ...prev, [field.field_key]: { ...current, source_config: data.value } }))
                       }
                     />
                   </td>
                   <td>
-                    <button className="ghost" type="button" onClick={() => saveField(field)} disabled={!templateId}>
+                    <Button type="button" onClick={() => saveField(field)} disabled={!templateId}>
                       Save
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               );
@@ -565,7 +586,7 @@ function FieldMappingPage({ templateDetail, draft, onReload, onSaved }) {
           </tbody>
         </table>
       </div>
-    </section>
+    </Card>
   );
 }
 
@@ -659,7 +680,7 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
 
   return (
     <div className="preview-layout">
-      <section className="panel preview-controls">
+      <Card className="panel preview-controls">
         <h3>Preview Context</h3>
         <div className="workflow-note">
           <strong>Quy trình đúng</strong>
@@ -668,94 +689,81 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
             3. Generate Word Preview để xem file Word sau merge. 4. Export DOCX khi đã ổn.
           </span>
         </div>
-        <label>
-          Customer ID
-          <input value={context.customer_id} onChange={(event) => setContext({ ...context, customer_id: event.target.value })} />
-        </label>
-        <label>
-          Monitoring Start
-          <input
+        <Field label="Customer ID">
+          <Input value={String(context.customer_id)} onChange={(_, data) => setContext({ ...context, customer_id: data.value })} />
+        </Field>
+        <Field label="Monitoring Start">
+          <Input
             value={context.monitoring_start}
-            onChange={(event) => setContext(syncReportPeriod({ ...context, monitoring_start: event.target.value }))}
+            onChange={(_, data) => setContext(syncReportPeriod({ ...context, monitoring_start: data.value }))}
           />
-        </label>
-        <label>
-          Monitoring End
-          <input
+        </Field>
+        <Field label="Monitoring End">
+          <Input
             value={context.monitoring_end}
-            onChange={(event) => setContext(syncReportPeriod({ ...context, monitoring_end: event.target.value }))}
+            onChange={(_, data) => setContext(syncReportPeriod({ ...context, monitoring_end: data.value }))}
           />
-        </label>
-        <label>
-          Report Month
-          <input
+        </Field>
+        <Field label="Report Month">
+          <Input
             value={context.report_month}
-            onChange={(event) => setContext({ ...context, report_month: event.target.value })}
+            onChange={(_, data) => setContext({ ...context, report_month: data.value })}
           />
-        </label>
-        <label>
-          Report Year
-          <input
+        </Field>
+        <Field label="Report Year">
+          <Input
             value={context.report_year}
-            onChange={(event) => setContext({ ...context, report_year: event.target.value })}
+            onChange={(_, data) => setContext({ ...context, report_year: data.value })}
           />
-        </label>
+        </Field>
         <div className="button-row">
-          <button className="primary" type="button" onClick={runPreview} disabled={!templateId || busy}>
+          <Button appearance="primary" type="button" onClick={runPreview} disabled={!templateId || busy}>
             Preview
-          </button>
-          <button className="ghost" type="button" onClick={runTemplateize} disabled={!templateId || busy}>
+          </Button>
+          <Button type="button" onClick={runTemplateize} disabled={!templateId || busy}>
             Create DOCX Template
-          </button>
-          <button className="ghost" type="button" onClick={() => runExport("docx", true)} disabled={!templateId || busy}>
+          </Button>
+          <Button type="button" onClick={() => runExport("docx", true)} disabled={!templateId || busy}>
             Generate Word Preview
-          </button>
-          <button className="ghost" type="button" onClick={() => runExport("docx", false)} disabled={!templateId || busy}>
+          </Button>
+          <Button type="button" onClick={() => runExport("docx", false)} disabled={!templateId || busy}>
             Export DOCX
-          </button>
-          <button className="ghost" type="button" onClick={() => runExport("xlsx", false)} disabled={!templateId || busy}>
+          </Button>
+          <Button type="button" onClick={() => runExport("xlsx", false)} disabled={!templateId || busy}>
             Export XLSX
-          </button>
+          </Button>
         </div>
-        {message && <div className="notice">{message}</div>}
+        {message && (
+          <MessageBar intent="info">
+            <MessageBarBody>{message}</MessageBarBody>
+          </MessageBar>
+        )}
         {preview?.warnings?.length > 0 && <pre className="json-box">{JSON.stringify(preview.warnings, null, 2)}</pre>}
         {preview?.errors?.length > 0 && <pre className="json-box error-box">{JSON.stringify(preview.errors, null, 2)}</pre>}
-      </section>
-      <section className="panel report-canvas">
-        <div className="preview-tabs">
-          <button
-            className={`step-pill ${activePreviewTab === "fields" ? "active" : ""}`}
-            type="button"
-            onClick={() => setActivePreviewTab("fields")}
-          >
-            Fields Value
-          </button>
-          <button
-            className={`step-pill ${activePreviewTab === "format" ? "active" : ""}`}
-            type="button"
-            onClick={() => setActivePreviewTab("format")}
-          >
-            Word Preview
-          </button>
-        </div>
+      </Card>
+      <Card className="panel report-canvas">
+        <TabList selectedValue={activePreviewTab} onTabSelect={(_, data) => setActivePreviewTab(data.value)}>
+          <Tab value="fields">Fields Value</Tab>
+          <Tab value="format">Word Preview</Tab>
+        </TabList>
 
         {activePreviewTab === "fields" ? (
           <div className="fields-preview">
             <div className="button-row">
-              <button
-                className={`ghost ${fieldViewMode === "markdown" ? "active-soft" : ""}`}
+              <Button
+                appearance={fieldViewMode === "markdown" ? "primary" : "secondary"}
                 type="button"
                 onClick={() => setFieldViewMode("markdown")}
               >
                 Markdown
-              </button>
-              <button
-                className={`ghost ${fieldViewMode === "json" ? "active-soft" : ""}`}
+              </Button>
+              <Button
+                appearance={fieldViewMode === "json" ? "primary" : "secondary"}
                 type="button"
                 onClick={() => setFieldViewMode("json")}
               >
                 JSON
-              </button>
+              </Button>
             </div>
             <pre className="json-box values-box">
               {preview
@@ -777,13 +785,17 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
             {!wordPreviewReady && <WordLikeHtmlPreview draft={draft} html={preview?.html} />}
           </div>
         )}
-      </section>
+      </Card>
     </div>
   );
 }
 
 function EmptyPanel({ text }) {
-  return <div className="panel muted">{text}</div>;
+  return (
+    <Card className="panel">
+      <EmptyState title={text} />
+    </Card>
+  );
 }
 
 function normalizeJsonInput(value) {

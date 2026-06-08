@@ -1,8 +1,11 @@
+import { Button } from "@fluentui/react-components";
+import { DocumentTextRegular, HomeRegular, SignOutRegular, TableRegular } from "@fluentui/react-icons";
+
 function Sidebar({ onLogout, activeView, onViewChange }) {
   const items = [
-    { key: "reports", label: "Reports" },
-    { key: "elk", label: "ELK" },
-    { key: "templates", label: "Templates" }
+    { key: "reports", label: "Reports", icon: <HomeRegular /> },
+    { key: "elk", label: "ELK", icon: <TableRegular /> },
+    { key: "templates", label: "Templates", icon: <DocumentTextRegular /> }
   ];
 
   return (
@@ -16,19 +19,21 @@ function Sidebar({ onLogout, activeView, onViewChange }) {
       </div>
       <nav className="menu">
         {items.map((item) => (
-          <button
+          <Button
+            appearance={activeView === item.key ? "primary" : "subtle"}
+            icon={item.icon}
             className={`menu-item ${activeView === item.key ? "active" : ""}`}
             type="button"
             onClick={() => onViewChange(item.key)}
             key={item.key}
           >
             {item.label}
-          </button>
+          </Button>
         ))}
       </nav>
-      <button className="logout-btn" type="button" onClick={onLogout}>
+      <Button className="logout-btn" icon={<SignOutRegular />} type="button" onClick={onLogout}>
         Logout
-      </button>
+      </Button>
     </aside>
   );
 }

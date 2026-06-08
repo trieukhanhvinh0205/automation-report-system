@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { MessageBar, MessageBarBody } from "@fluentui/react-components";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/Sidebar";
 import Topbar from "../components/Topbar";
@@ -173,7 +174,11 @@ function DashboardPage() {
           }
         />
 
-        {activeView === "reports" && message && <div className="notice">{message}</div>}
+        {activeView === "reports" && message && (
+          <MessageBar intent="info">
+            <MessageBarBody>{message}</MessageBarBody>
+          </MessageBar>
+        )}
 
         {activeView === "reports" ? (
           <div className="dashboard-grid">

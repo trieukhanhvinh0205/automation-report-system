@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Button, Card, Field, Input, Spinner, Text } from "@fluentui/react-components";
 import { useAuth } from "../context/AuthContext";
 import { loginRequest } from "../services/authService";
+import { AppMessage } from "../components/ui/Feedback";
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -29,30 +31,25 @@ function LoginPage() {
 
   return (
     <main className="login-shell">
-      <section className="login-card">
-        <h1>Automation Report</h1>
-        <p>Sign in to open your dashboard.</p>
+      <Card className="login-card">
+        <div>
+          <h1>Automation Report</h1>
+          <Text color="secondary">Sign in to open your dashboard.</Text>
+        </div>
 
         <form onSubmit={handleSubmit} className="stack">
-          <input
-            placeholder="Username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-          {error && <div className="error">{error}</div>}
-          <button className="primary" type="submit" disabled={loading}>
-            {loading ? "Logging in..." : "Login"}
-          </button>
+          <Field label="Username" required>
+            <Input value={username} onChange={(_, data) => setUsername(data.value)} required />
+          </Field>
+          <Field label="Password" required>
+            <Input type="password" value={password} onChange={(_, data) => setPassword(data.value)} required />
+          </Field>
+          <AppMessage intent="error">{error}</AppMessage>
+          <Button appearance="primary" type="submit" disabled={loading}>
+            {loading ? <Spinner size="tiny" label="Logging in..." /> : "Login"}
+          </Button>
         </form>
-      </section>
+      </Card>
     </main>
   );
 }

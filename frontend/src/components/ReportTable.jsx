@@ -1,8 +1,10 @@
+import { Badge, Card } from "@fluentui/react-components";
 import { formatDate } from "../utils/format";
+import { EmptyState } from "./ui/Feedback";
 
 function ReportTable({ reports, selectedId, onSelect }) {
   return (
-    <section className="panel">
+    <Card className="panel">
       <h3>Reports</h3>
       <div className="table-wrap">
         <table>
@@ -17,7 +19,7 @@ function ReportTable({ reports, selectedId, onSelect }) {
             {reports.length === 0 && (
               <tr>
                 <td colSpan={3} className="muted">
-                  No reports yet
+                  <EmptyState title="No reports yet" description="Create a report to preview and export." />
                 </td>
               </tr>
             )}
@@ -29,7 +31,9 @@ function ReportTable({ reports, selectedId, onSelect }) {
               >
                 <td>{report.title}</td>
                 <td>
-                  <span className={`badge ${report.status}`}>{report.status}</span>
+                  <Badge appearance="filled" color={report.status === "completed" ? "success" : "warning"}>
+                    {report.status}
+                  </Badge>
                 </td>
                 <td>{formatDate(report.created_at)}</td>
               </tr>
@@ -37,7 +41,7 @@ function ReportTable({ reports, selectedId, onSelect }) {
           </tbody>
         </table>
       </div>
-    </section>
+    </Card>
   );
 }
 

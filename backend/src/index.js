@@ -6,6 +6,7 @@ const config = require("./config");
 const authRoutes = require("./routes/auth");
 const reportRoutes = require("./routes/reports");
 const fileRoutes = require("./routes/files");
+const onlyofficeRoutes = require("./routes/onlyoffice");
 const templateRoutes = require("./routes/templates");
 const authMiddleware = require("./middlewares/auth");
 const errorHandler = require("./middlewares/error");
@@ -28,6 +29,7 @@ app.get("/health", (req, res) => {
 });
 
 app.use("/auth", authRoutes);
+app.use("/onlyoffice", onlyofficeRoutes);
 app.use("/reports", authMiddleware, reportRoutes);
 app.use("/files", authMiddleware, fileRoutes);
 app.use("/templates", authMiddleware, templateRoutes);

@@ -68,3 +68,8 @@ export async function downloadGeneratedTemplateReport(downloadUrl) {
   });
   return response.data;
 }
+
+export async function getOnlyOfficeGeneratedConfig(reportId) {
+  const response = await apiClient.get(`/onlyoffice/config/generated/${reportId}`);
+  return response.data;
+}

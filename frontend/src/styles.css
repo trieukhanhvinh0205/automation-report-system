@@ -887,6 +887,24 @@ tbody tr.selected {
   margin: 0 auto 18px;
 }
 
+.onlyoffice-preview,
+.onlyoffice-shell,
+.onlyoffice-editor {
+  min-height: 720px;
+}
+
+.onlyoffice-shell {
+  display: grid;
+  gap: 10px;
+}
+
+.onlyoffice-editor {
+  width: 100%;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
 .active-soft {
   outline: 2px solid #99f6e4;
   background: #ccfbf1;

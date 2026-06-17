@@ -26,6 +26,7 @@ import {
   deleteTemplate,
   downloadGeneratedTemplateReport,
   exportTemplate,
+  getOnlyOfficeGeneratedConfig,
   getTemplate,
   listCustomers,
   listTemplates,
@@ -37,6 +38,7 @@ import {
   uploadTemplate
 } from "../services/templateService";
 import { EmptyState } from "../components/ui/Feedback";
+import OnlyOfficeEditor from "../components/OnlyOfficeEditor";
 
 const STEP_LABELS = ["Upload", "Review", "Builder", "Mapping", "Preview"];
 
@@ -607,6 +609,7 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
   const [activePreviewTab, setActivePreviewTab] = useState("fields");
   const [fieldViewMode, setFieldViewMode] = useState("markdown");
   const [wordPreviewReady, setWordPreviewReady] = useState(false);
+  const [onlyOfficePayload, setOnlyOfficePayload] = useState(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -630,6 +633,10 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
     setBusy(true);
     try {
       const data = await exportTemplate(templateId, { ...context, format });
+      if (format === "docx" && data.generated_report_id) {
+        const onlyOfficeConfig = await getOnlyOfficeGeneratedConfig(data.generated_report_id);
+        setOnlyOfficePayload(onlyOfficeConfig);
+      }
       if (renderWordPreview && data.download_url && wordPreviewRef.current) {
         const blob = await downloadGeneratedTemplateReport(data.download_url);
         wordPreviewRef.current.innerHTML = "";
@@ -646,6 +653,9 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
       } else if (data.download_url) {
         const blob = await downloadGeneratedTemplateReport(data.download_url);
         downloadBlob(blob, data.file_name || `report.${format}`);
+        if (format === "docx" && data.generated_report_id) {
+          setActivePreviewTab("onlyoffice");
+        }
       }
       setMessage(`Export thành công: ${data.file_name || data.file_path}`);
     } catch (err) {
@@ -745,6 +755,7 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
         <TabList selectedValue={activePreviewTab} onTabSelect={(_, data) => setActivePreviewTab(data.value)}>
           <Tab value="fields">Fields Value</Tab>
           <Tab value="format">Word Preview</Tab>
+          <Tab value="onlyoffice" disabled={!onlyOfficePayload}>OnlyOffice Editor</Tab>
         </TabList>
 
         {activePreviewTab === "fields" ? (
@@ -773,7 +784,7 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
                 : "Bấm Preview để xem fields:value trước khi merge vào template."}
             </pre>
           </div>
-        ) : (
+        ) : activePreviewTab === "format" ? (
           <div className="format-preview">
             <div className="word-preview-hint">
               <strong>DOCX render preview</strong>
@@ -783,6 +794,17 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
             </div>
             <div ref={wordPreviewRef} className={`docx-preview-host ${wordPreviewReady ? "ready" : ""}`} />
             {!wordPreviewReady && <WordLikeHtmlPreview draft={draft} html={preview?.html} />}
+          </div>
+        ) : (
+          <div className="onlyoffice-preview">
+            {onlyOfficePayload ? (
+              <OnlyOfficeEditor
+                documentServerUrl={onlyOfficePayload.document_server_url}
+                config={onlyOfficePayload.config}
+              />
+            ) : (
+              <EmptyState title="Chưa có file DOCX" description="Bấm Export DOCX để tạo file rồi mở bằng OnlyOffice." />
+            )}
           </div>
         )}
       </Card>

@@ -80,9 +80,11 @@ function defaultSourceConfig(fieldKey, sourceType) {
       filters: {
         startTime: "{{monitoring_start}}",
         endTime: "{{monitoring_end}}",
-        tenant: "{{customer_tenant}}",
-        size: 200
-      }
+        tenant: "{{customer_tenant}}"
+      },
+      fetch_all: fieldKey !== "total_processed_alerts",
+      max_size: 10000,
+      confirmed_only: true
     };
   }
 

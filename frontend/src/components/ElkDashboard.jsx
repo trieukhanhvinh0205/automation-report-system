@@ -50,6 +50,109 @@ function sortByField(items, sortField, sortDirection) {
   });
 }
 
+function parseVietnameseDateTime(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+
+  const match = text.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[\s,]+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/);
+  if (match) {
+    const [, day, month, year, hour = "0", minute = "0", second = "0"] = match;
+    const parts = {
+      day: Number(day),
+      month: Number(month),
+      year: Number(year),
+      hour: Number(hour),
+      minute: Number(minute),
+      second: Number(second)
+    };
+    if (
+      parts.month < 1 ||
+      parts.month > 12 ||
+      parts.day < 1 ||
+      parts.day > daysInMonth(parts.year, parts.month) ||
+      parts.hour > 23 ||
+      parts.minute > 59 ||
+      parts.second > 59
+    ) {
+      return null;
+    }
+    const date = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour - 7, parts.minute, parts.second));
+    if (
+      Number.isFinite(date.getTime())
+    ) {
+      return date.toISOString();
+    }
+    return null;
+  }
+
+  const fallback = new Date(text);
+  return Number.isNaN(fallback.getTime()) ? null : fallback.toISOString();
+}
+
+function daysInMonth(year, month) {
+  return new Date(Number(year), Number(month), 0).getDate();
+}
+
+function splitVietnameseDateTime(value) {
+  const match = String(value || "")
+    .trim()
+    .match(/^(\d{1,2}\/\d{1,2}\/\d{4})(?:[\s,]+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/);
+  return {
+    date: match?.[1] || String(value || "").split(/\s+/)[0] || "",
+    hour: padTimePart(match?.[2] || "00"),
+    minute: padTimePart(match?.[3] || "00"),
+    second: padTimePart(match?.[4] || "00")
+  };
+}
+
+function parseVietnameseDateOnly(value) {
+  const match = String(value || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return null;
+  const [, day, month, year] = match;
+  const date = new Date(Number(year), Number(month) - 1, Number(day));
+  if (
+    date.getFullYear() !== Number(year) ||
+    date.getMonth() !== Number(month) - 1 ||
+    date.getDate() !== Number(day)
+  ) {
+    return null;
+  }
+  return date;
+}
+
+function formatVietnameseDate(date) {
+  return [
+    String(date.getDate()).padStart(2, "0"),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    date.getFullYear()
+  ].join("/");
+}
+
+function buildCalendarDays(viewDate) {
+  const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
+  const startOffset = firstDay.getDay();
+  const start = new Date(firstDay);
+  start.setDate(firstDay.getDate() - startOffset);
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    return date;
+  });
+}
+
+function joinVietnameseDateTime(parts) {
+  if (!parts.date) return "";
+  return `${parts.date} ${parts.hour}:${parts.minute}:${parts.second}`;
+}
+
+function padTimePart(value) {
+  return String(Number(value || 0)).padStart(2, "0");
+}
+
+const HOURS = Array.from({ length: 24 }, (_, index) => String(index).padStart(2, "0"));
+const MINUTES_SECONDS = Array.from({ length: 60 }, (_, index) => String(index).padStart(2, "0"));
+
 function ElkDashboard({ alerts, meta, filterOptions, loading, error, onRefresh, onExportWord, lastUpdated }) {
   const [tenantFilter, setTenantFilter] = useState("all");
   const [analystFilter, setAnalystFilter] = useState("all");
@@ -165,8 +268,10 @@ function ElkDashboard({ alerts, meta, filterOptions, loading, error, onRefresh, 
       page: nextPage,
       size: nextSize
     };
-    if (startTime) query.startTime = new Date(startTime).toISOString();
-    if (endTime) query.endTime = new Date(endTime).toISOString();
+    const parsedStartTime = parseVietnameseDateTime(startTime);
+    const parsedEndTime = parseVietnameseDateTime(endTime);
+    if (startTime && parsedStartTime) query.startTime = parsedStartTime;
+    if (endTime && parsedEndTime) query.endTime = parsedEndTime;
     if (severityFilter !== "all") query.severity = severityFilter;
     if (tenantFilter !== "all") query.tenant = tenantFilter;
     if (analystFilter !== "all") query.analyst = analystFilter;
@@ -258,8 +363,8 @@ function ElkDashboard({ alerts, meta, filterOptions, loading, error, onRefresh, 
       </div>
 
       <div className="elk-filters">
-        <Input type="datetime-local" value={startTime} onChange={(_, data) => setStartTime(data.value)} />
-        <Input type="datetime-local" value={endTime} onChange={(_, data) => setEndTime(data.value)} />
+        <VietnameseDateTimeInput label="Từ thời gian (giờ Việt Nam)" value={startTime} onChange={setStartTime} />
+        <VietnameseDateTimeInput label="Đến thời gian (giờ Việt Nam)" value={endTime} onChange={setEndTime} />
         <Input value={search} onChange={(_, data) => setSearch(data.value)} placeholder="Search alert name" />
         <MultiSelectFilter
           label="Tenant"
@@ -416,6 +521,104 @@ function MultiSelectFilter({ label, options, selected, onToggle, onClear }) {
         ))}
       </div>
     </div>
+  );
+}
+
+function VietnameseDateTimeInput({ label, value, onChange }) {
+  const parts = splitVietnameseDateTime(value);
+  const selectedDate = parseVietnameseDateOnly(parts.date);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [viewDate, setViewDate] = useState(selectedDate || new Date());
+
+  function update(patch) {
+    onChange(joinVietnameseDateTime({ ...parts, ...patch }));
+  }
+
+  function openCalendar() {
+    setViewDate(selectedDate || new Date());
+    setCalendarOpen((prev) => !prev);
+  }
+
+  function moveMonth(offset) {
+    setViewDate((current) => new Date(current.getFullYear(), current.getMonth() + offset, 1));
+  }
+
+  return (
+    <Field label={label}>
+      <div className="vn-datetime-control">
+        <div className="vn-date-picker">
+          <Input
+            value={parts.date}
+            onChange={(_, data) => update({ date: data.value })}
+            placeholder="dd/mm/yyyy"
+          />
+          <Button type="button" onClick={openCalendar}>
+            Lịch
+          </Button>
+          {calendarOpen && (
+            <div className="vn-calendar-popover">
+              <div className="vn-calendar-head">
+                <Button size="small" type="button" onClick={() => moveMonth(-1)}>
+                  ‹
+                </Button>
+                <strong>
+                  Tháng {viewDate.getMonth() + 1}/{viewDate.getFullYear()}
+                </strong>
+                <Button size="small" type="button" onClick={() => moveMonth(1)}>
+                  ›
+                </Button>
+              </div>
+              <div className="vn-calendar-grid weekdays">
+                {["CN", "T2", "T3", "T4", "T5", "T6", "T7"].map((day) => (
+                  <span key={day}>{day}</span>
+                ))}
+              </div>
+              <div className="vn-calendar-grid">
+                {buildCalendarDays(viewDate).map((date) => {
+                  const dateText = formatVietnameseDate(date);
+                  const inMonth = date.getMonth() === viewDate.getMonth();
+                  const active = parts.date === dateText;
+                  return (
+                    <button
+                      className={`vn-calendar-day ${inMonth ? "" : "muted-day"} ${active ? "active" : ""}`}
+                      key={date.toISOString()}
+                      type="button"
+                      onClick={() => {
+                        update({ date: dateText });
+                        setCalendarOpen(false);
+                      }}
+                    >
+                      {date.getDate()}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+        <Select aria-label={`${label} giờ`} value={parts.hour} onChange={(event) => update({ hour: event.target.value })}>
+          {HOURS.map((hour) => (
+            <option key={hour} value={hour}>
+              {hour}
+            </option>
+          ))}
+        </Select>
+        <Select aria-label={`${label} phút`} value={parts.minute} onChange={(event) => update({ minute: event.target.value })}>
+          {MINUTES_SECONDS.map((minute) => (
+            <option key={minute} value={minute}>
+              {minute}
+            </option>
+          ))}
+        </Select>
+        <Select aria-label={`${label} giây`} value={parts.second} onChange={(event) => update({ second: event.target.value })}>
+          {MINUTES_SECONDS.map((second) => (
+            <option key={second} value={second}>
+              {second}
+            </option>
+          ))}
+        </Select>
+      </div>
+    </Field>
   );
 }
 

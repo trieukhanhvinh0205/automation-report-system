@@ -1,5 +1,9 @@
 const pool = require("../db");
-const { getElkReports, searchElkReports } = require("./elkService");
+const { searchElkReports } = require("./elkService");
+
+const DEFAULT_ELK_TABLE_LIMIT = 10000;
+const ELK_BATCH_SIZE = 500;
+const ALERT_TABLE_FIELDS = new Set(["operation_alerts", "security_alerts", "incident_alerts"]);
 
 async function resolveFields(templateJson, context = {}) {
   const values = { ...context, ...(context.overrides || {}) };
@@ -86,12 +90,55 @@ async function resolveElkField(field, values) {
     return result.total;
   }
 
-  const rows = await getElkReports({ ...filters, size: Number(filters.size || 200) });
+  const rows = await resolveElkRows({ filters, config, values });
+  const mappedRows = rows.map((row, index) => mapAlertRow(row, index));
+  if (ALERT_TABLE_FIELDS.has(field.field_key)) {
+    values[`__all_${field.field_key}`] = mappedRows;
+  }
 
   if (mode === "severity_summary") return buildSeveritySummary(rows);
   if (field.field_key === "mitre_summary") return buildMitreSummary(rows);
 
-  return rows.map((row, index) => mapAlertRow(row, index));
+  const detailRows = shouldKeepOnlyConfirmedDetailRows(field, config, filters)
+    ? mappedRows.filter((row) => row.__confirmed === true)
+    : mappedRows;
+  return detailRows.map(stripInternalFields);
+}
+
+async function resolveElkRows({ filters, config, values }) {
+  const requestedSize = Number(filters.size || config.size || 0);
+  const totalHint = Number(values.total_processed_alerts || 0);
+  const shouldFetchAll =
+    config.fetch_all === true ||
+    filters.fetch_all === true ||
+    isReportTableField(config) ||
+    requestedSize >= DEFAULT_ELK_TABLE_LIMIT;
+  const limit = shouldFetchAll
+    ? Math.min(Number(config.max_size || filters.max_size || totalHint || DEFAULT_ELK_TABLE_LIMIT), DEFAULT_ELK_TABLE_LIMIT)
+    : Number(requestedSize || 200);
+
+  const rows = [];
+  let from = 0;
+  let total = null;
+
+  while (rows.length < limit) {
+    const batchSize = Math.min(ELK_BATCH_SIZE, limit - rows.length);
+    const result = await searchElkReports({ ...filters, from, size: batchSize });
+    rows.push(...result.rows);
+    total = Number(result.total || 0);
+    if (result.rows.length === 0 || rows.length >= total) break;
+    from += result.rows.length;
+  }
+
+  return rows;
+}
+
+function isReportTableField(config = {}) {
+  return config.mode === "list";
+}
+
+function shouldKeepOnlyConfirmedDetailRows(field, config = {}, filters = {}) {
+  return ALERT_TABLE_FIELDS.has(field.field_key) && config.confirmed_only !== false && filters.confirmed_only !== false;
 }
 
 function computeField(field, values) {
@@ -135,16 +182,17 @@ function buildMitreSummary(rows = []) {
 }
 
 function mapAlertRow(row, index = 0) {
+  const confirmKeyword = extractConfirmKeyword(row);
   return {
     stt: index + 1,
     offense_id: row.soarId || row.siemAlertId || row.id,
     siem_rule: row.alertName || row.soarCaseName,
     detected_time: row.caseDetectedTime || row.timestamp,
     case_created_time: row.openCaseTime,
-    description: row.reasonCloseCase || row.messageConfirmCase || row.resolution || "",
+    description: buildDescriptionWithConfirmKeyword(row.description || row.reasonCloseCase || row.messageConfirmCase || row.resolution || "", confirmKeyword),
     status: row.status === false ? "Đã đóng" : String(row.status ?? ""),
     sla: row.sla === false ? "Không đáp ứng" : row.sla === true ? "Đáp ứng" : "",
-    handling_detail: row.messageConfirmCase || "",
+    handling_detail: row.handlingDetail || row.messageConfirmCase || "",
     severity: row.severity,
     priority: row.priority,
     tenant: row.tenant,
@@ -152,8 +200,94 @@ function mapAlertRow(row, index = 0) {
     tactics: row.tactics,
     techniques: row.techniques,
     resolution: row.resolution,
-    platform: row.platform
+    platform: row.platform,
+    __confirmed: Boolean(confirmKeyword)
   };
+}
+
+function isConfirmedAlertRow(row) {
+  return Boolean(extractConfirmKeyword(row));
+}
+
+function stripInternalFields(row) {
+  const { __confirmed, ...publicRow } = row;
+  return publicRow;
+}
+
+function buildDescriptionWithConfirmKeyword(description, confirmKeyword) {
+  const base = String(description || "").trim();
+  if (!confirmKeyword) return base;
+  if (containsDaConfirmKh(base)) return canonicalConfirmKeyword(base);
+  return base ? `${base} - Đã Confirm KH` : "Đã Confirm KH";
+}
+
+function extractConfirmKeyword(row = {}) {
+  const candidates = [
+    row.description,
+    row.messageConfirmCase,
+    row.reasonCloseCase,
+    row.resolution,
+    row.soarCaseName,
+    row.alertName,
+    ...collectStringValues(row.rawSource)
+  ];
+  return candidates.some(containsConfirmKeyword) ? "Đã Confirm KH" : "";
+}
+
+function collectStringValues(value, acc = []) {
+  if (acc.length > 1000 || value === null || value === undefined) return acc;
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    acc.push(String(value));
+    return acc;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectStringValues(item, acc));
+    return acc;
+  }
+  if (typeof value === "object") {
+    Object.values(value).forEach((item) => collectStringValues(item, acc));
+  }
+  return acc;
+}
+
+function containsConfirmKeyword(value) {
+  return containsDaConfirmKh(value) || containsKhConfirm(value) || containsConfirmKh(value) || containsDaBaoKh(value);
+}
+
+function containsDaConfirmKh(value) {
+  const normalized = normalizeVietnamese(value);
+  return /(^|[^a-z0-9])da[^a-z0-9]+confirm[^a-z0-9]+kh([^a-z0-9]|$)/i.test(normalized);
+}
+
+function containsKhConfirm(value) {
+  const normalized = normalizeVietnamese(value);
+  return /(^|[^a-z0-9])kh[^a-z0-9]+confirm([^a-z0-9]|$)/i.test(normalized);
+}
+
+function containsConfirmKh(value) {
+  const normalized = normalizeVietnamese(value);
+  return /(^|[^a-z0-9])confirm[^a-z0-9]+kh([^a-z0-9]|$)/i.test(normalized);
+}
+
+function containsDaBaoKh(value) {
+  const normalized = normalizeVietnamese(value);
+  return /(^|[^a-z0-9])da[^a-z0-9]+bao[^a-z0-9]+kh([^a-z0-9]|$)/i.test(normalized);
+}
+
+function canonicalConfirmKeyword(value) {
+  return String(value || "")
+    .replace(/(?:đã|da)\s+confirm\s+kh/gi, "Đã Confirm KH")
+    .replace(/(?:đã|da)\s+báo\s+kh/gi, "Đã Confirm KH")
+    .replace(/da\s+bao\s+kh/gi, "Đã Confirm KH");
+}
+
+function normalizeVietnamese(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase();
 }
 
 function resolveObjectTemplates(obj, values) {

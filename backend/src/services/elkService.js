@@ -110,11 +110,11 @@ function buildElkQuery({
   }
 
   if (reasonCloseCase) {
-    filter.push({ term: { "reason_close_case.keyword": reasonCloseCase } });
+    must.push(buildTextShouldQuery("reason_close_case", reasonCloseCase));
   }
 
   if (messageConfirmCase) {
-    filter.push({ term: { "message_confirm_case.keyword": messageConfirmCase } });
+    must.push(buildTextShouldQuery("message_confirm_case", messageConfirmCase));
   }
 
   if (soarCaseName) {
@@ -236,11 +236,26 @@ function parseList(value) {
     .filter(Boolean);
 }
 
+function buildTextShouldQuery(field, value) {
+  return {
+    bool: {
+      minimum_should_match: 1,
+      should: [
+        { term: { [`${field}.keyword`]: value } },
+        { match_phrase: { [field]: value } },
+        { match: { [field]: value } }
+      ]
+    }
+  };
+}
+
 function mapElkItem(item) {
   return {
     id: item._id,
+    rawSource: item._source,
     timestamp: item._source["@timestamp"],
     alertName: item._source.siem_alert_name,
+    description: item._source.description || item._source.alert_description || item._source.siem_alert_description || item._source.message,
     severity: item._source.severity,
     priority: item._source.priority,
     tactics: item._source.mitre_tactic,
@@ -259,6 +274,7 @@ function mapElkItem(item) {
     platform: item._source.platform,
     sla: item._source.sla,
     messageConfirmCase: item._source.message_confirm_case,
+    handlingDetail: item._source.handling_detail || item._source.handlingDetail || item._source.detail,
     timeDiffMinutes: item._source.timeDiffMinutes,
     timeDetectedToAnalyzedMinutes: item._source.timeDetectedtoAnalyzedMinutes,
     timeOpenToDetectedMinutes: item._source.timeOpentoDetectedMinutes

@@ -10,6 +10,7 @@ const { extractSections } = require("../services/sectionExtractorService");
 const { extractFields } = require("../services/fieldExtractorService");
 const {
   createTemplate,
+  deleteSection,
   deleteTemplate,
   getTemplateDetail,
   listCustomers,
@@ -134,6 +135,24 @@ router.get(
 );
 
 router.get(
+  "/generated/:reportId/preview",
+  asyncHandler(async (req, res) => {
+    const result = await pool.query("SELECT * FROM generated_reports WHERE id = $1", [
+      Number(req.params.reportId)
+    ]);
+    if (result.rowCount === 0) {
+      const err = new Error("Generated report not found");
+      err.status = 404;
+      throw err;
+    }
+    const report = result.rows[0];
+    res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    res.setHeader("Content-Disposition", `inline; filename="${path.basename(report.file_path)}"`);
+    return res.sendFile(path.resolve(report.file_path));
+  })
+);
+
+router.get(
   "/templateized/:fileName/download",
   asyncHandler(async (req, res) => {
     const fileName = path.basename(req.params.fileName);
@@ -202,6 +221,14 @@ router.put(
   asyncHandler(async (req, res) => {
     const section = await updateSection(Number(req.params.id), req.params.sectionKey, req.body);
     res.json({ section });
+  })
+);
+
+router.delete(
+  "/:id/sections/:sectionKey",
+  asyncHandler(async (req, res) => {
+    const section = await deleteSection(Number(req.params.id), req.params.sectionKey);
+    res.json({ message: "Section deleted", section });
   })
 );
 
@@ -279,6 +306,7 @@ router.post(
     res.json({
       ...result,
       download_url: result.generated_report_id ? `/templates/generated/${result.generated_report_id}/download` : null,
+      preview_url: result.generated_report_id ? `/templates/generated/${result.generated_report_id}/preview` : null,
       warnings: resolved.warnings
     });
   })

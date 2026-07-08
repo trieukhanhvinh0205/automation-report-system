@@ -213,12 +213,78 @@ async function updateSection(templateId, sectionKey, payload) {
   );
 
   if (result.rowCount === 0) {
-    const err = new Error("Template section not found");
-    err.status = 404;
-    throw err;
+    const insertResult = await pool.query(
+      `INSERT INTO template_sections
+       (template_id, section_key, section_title, section_type, order_index, is_enabled, config, content_template)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING *`,
+      [
+        templateId,
+        sectionKey,
+        payload.title || payload.section_title || sectionKey,
+        payload.section_type || "text",
+        payload.order_index !== undefined ? Number(payload.order_index) : 999,
+        payload.is_enabled !== undefined ? Boolean(payload.is_enabled) : true,
+        JSON.stringify(payload.config || {}),
+        payload.content_template !== undefined ? payload.content_template : ""
+      ]
+    );
+
+    return insertResult.rows[0];
   }
 
   return result.rows[0];
+}
+
+async function deleteSection(templateId, sectionKey) {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const result = await client.query(
+      `DELETE FROM template_sections
+       WHERE template_id = $1 AND section_key = $2
+       RETURNING section_key, section_title AS title`,
+      [templateId, sectionKey]
+    );
+
+    if (result.rowCount === 0) {
+      const err = new Error("Template section not found");
+      err.status = 404;
+      throw err;
+    }
+
+    const sections = await client.query(
+      `SELECT section_key
+       FROM template_sections
+       WHERE template_id = $1
+       ORDER BY order_index ASC, id ASC`,
+      [templateId]
+    );
+
+    for (const [index, section] of sections.rows.entries()) {
+      await client.query(
+        `UPDATE template_sections
+         SET order_index = $1, updated_at = NOW()
+         WHERE template_id = $2 AND section_key = $3`,
+        [index + 1, templateId, section.section_key]
+      );
+    }
+
+    await client.query("DELETE FROM report_layouts WHERE template_id = $1", [templateId]);
+    await client.query(
+      "INSERT INTO report_layouts (template_id, layout_json) VALUES ($1, $2)",
+      [templateId, JSON.stringify({ sections_order: sections.rows.map((section) => section.section_key) })]
+    );
+
+    await client.query("COMMIT");
+    return result.rows[0];
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
+  }
 }
 
 async function syncTemplateParts(client, templateId, templateJson) {
@@ -338,6 +404,7 @@ function parseDefault(value) {
 
 module.exports = {
   createTemplate,
+  deleteSection,
   deleteTemplate,
   getTemplateDetail,
   listCustomers,

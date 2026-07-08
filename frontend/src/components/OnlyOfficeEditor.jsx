@@ -71,17 +71,50 @@ function loadOnlyOfficeApi(documentServerUrl) {
   if (window.DocsAPI?.DocEditor) return Promise.resolve();
   if (loadedScripts.has(scriptUrl)) return loadedScripts.get(scriptUrl);
 
-  const promise = new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = scriptUrl;
-    script.async = true;
-    script.onload = resolve;
-    script.onerror = () => reject(new Error(`Cannot load OnlyOffice API from ${scriptUrl}`));
-    document.body.appendChild(script);
+  const promise = loadScriptWithRetry(scriptUrl, 3).catch((error) => {
+    loadedScripts.delete(scriptUrl);
+    throw error;
   });
 
   loadedScripts.set(scriptUrl, promise);
   return promise;
+}
+
+async function loadScriptWithRetry(scriptUrl, attempts) {
+  let lastError;
+
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await loadScriptOnce(scriptUrl);
+      return;
+    } catch (error) {
+      lastError = error;
+      await wait(700 * attempt);
+    }
+  }
+
+  throw lastError || new Error(`Cannot load OnlyOffice API from ${scriptUrl}`);
+}
+
+function loadScriptOnce(scriptUrl) {
+  return new Promise((resolve, reject) => {
+    document.querySelectorAll(`script[data-onlyoffice-api="true"]`).forEach((script) => script.remove());
+
+    const script = document.createElement("script");
+    script.src = `${scriptUrl}${scriptUrl.includes("?") ? "&" : "?"}t=${Date.now()}`;
+    script.async = true;
+    script.dataset.onlyofficeApi = "true";
+    script.onload = resolve;
+    script.onerror = () => {
+      script.remove();
+      reject(new Error(`Cannot load OnlyOffice API from ${scriptUrl}`));
+    };
+    document.body.appendChild(script);
+  });
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export default OnlyOfficeEditor;

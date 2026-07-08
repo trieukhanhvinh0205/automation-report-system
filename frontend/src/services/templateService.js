@@ -42,6 +42,11 @@ export async function updateTemplateSection(templateId, sectionKey, payload) {
   return response.data.section;
 }
 
+export async function deleteTemplateSection(templateId, sectionKey) {
+  const response = await apiClient.delete(`/templates/${templateId}/sections/${sectionKey}`);
+  return response.data.section;
+}
+
 export async function updateTemplateFieldMapping(templateId, fieldKey, payload) {
   const response = await apiClient.put(`/templates/${templateId}/fields/${fieldKey}/mapping`, payload);
   return response.data.field;

@@ -23,6 +23,7 @@ import {
 } from "@fluentui/react-components";
 import {
   createTemplate,
+  deleteTemplateSection,
   deleteTemplate,
   downloadGeneratedTemplateReport,
   exportTemplate,
@@ -415,6 +416,34 @@ function ReportBuilderPage({ templateDetail, draft, onDraftChange, onReload, onS
     onReload();
   }
 
+  async function removeSection(section, index) {
+    if (!window.confirm(`Xoa section "${section.title || section.section_key}"?`)) return;
+
+    const sections = (draft.sections || [])
+      .filter((_, itemIndex) => itemIndex !== index)
+      .map((item, itemIndex) => ({ ...item, order_index: itemIndex + 1 }));
+
+    onDraftChange({
+      ...draft,
+      sections,
+      layout: { ...(draft.layout || {}), sections_order: sections.map((item) => item.section_key) }
+    });
+
+    if (!templateId) return;
+
+    try {
+      await deleteTemplateSection(templateId, section.section_key);
+      onSaved("Da xoa section");
+      onReload();
+    } catch (err) {
+      if (String(section.section_key || "").startsWith("custom_section_")) {
+        onSaved("Da xoa section moi");
+        return;
+      }
+      onSaved(err.response?.data?.message || "Khong the xoa section");
+    }
+  }
+
   async function saveLayout() {
     if (!templateId) return;
     await updateTemplateLayout(templateId, {
@@ -439,7 +468,7 @@ function ReportBuilderPage({ templateDetail, draft, onDraftChange, onReload, onS
             </Button>
           </div>
         </div>
-        <div className="section-sort-list">
+        <div className="section-sort-list section-editor-scroll">
           {(draft.sections || []).map((section, index) => (
             <article
               className={`section-editor-card ${section.is_enabled === false ? "disabled" : ""}`}
@@ -471,6 +500,9 @@ function ReportBuilderPage({ templateDetail, draft, onDraftChange, onReload, onS
                 </Select>
                 <Button type="button" onClick={() => saveSection(section)} disabled={!templateId}>
                   Save
+                </Button>
+                <Button type="button" onClick={() => removeSection(section, index)}>
+                  Delete
                 </Button>
               </div>
               <Textarea
@@ -637,10 +669,17 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
         const onlyOfficeConfig = await getOnlyOfficeGeneratedConfig(data.generated_report_id);
         setOnlyOfficePayload(onlyOfficeConfig);
       }
-      if (renderWordPreview && data.download_url && wordPreviewRef.current) {
-        const blob = await downloadGeneratedTemplateReport(data.download_url);
-        wordPreviewRef.current.innerHTML = "";
-        await renderAsync(blob, wordPreviewRef.current, null, {
+
+      if (renderWordPreview) {
+        setActivePreviewTab("format");
+        await waitForRef(wordPreviewRef);
+        const blob = await downloadGeneratedTemplateReport(data.preview_url || data.download_url);
+        const previewHost = await waitForRef(wordPreviewRef);
+        if (!previewHost) {
+          throw new Error("Word Preview is not ready");
+        }
+        previewHost.innerHTML = "";
+        await renderAsync(blob, previewHost, null, {
           className: "docx-rendered",
           inWrapper: false,
           ignoreWidth: false,
@@ -650,16 +689,20 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
         });
         setWordPreviewReady(true);
         setActivePreviewTab("format");
+        setMessage(`Da tao Word Preview: ${data.file_name || data.file_path}`);
       } else if (data.download_url) {
         const blob = await downloadGeneratedTemplateReport(data.download_url);
         downloadBlob(blob, data.file_name || `report.${format}`);
         if (format === "docx" && data.generated_report_id) {
           setActivePreviewTab("onlyoffice");
         }
+        setMessage(`Export thanh cong: ${data.file_name || data.file_path}`);
       }
-      setMessage(`Export thành công: ${data.file_name || data.file_path}`);
     } catch (err) {
-      setMessage(err.response?.data?.message || "Export thất bại");
+      setMessage(
+        err.response?.data?.message ||
+          (renderWordPreview ? "Generate Word Preview that bai" : "Export that bai")
+      );
     } finally {
       setBusy(false);
     }
@@ -696,7 +739,7 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
           <strong>Quy trình đúng</strong>
           <span>
             1. Preview để kiểm tra fields:value. 2. Create DOCX Template nếu file gốc là báo cáo tay cũ.
-            3. Generate Word Preview để xem file Word sau merge. 4. Export DOCX khi đã ổn.
+              3. Generate Word Preview để xem/chỉnh file sau merge. 4. Export DOCX/XLSX khi đã ổn.
           </span>
         </div>
         <Field label="Customer ID">
@@ -803,7 +846,7 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
                 config={onlyOfficePayload.config}
               />
             ) : (
-              <EmptyState title="Chưa có file DOCX" description="Bấm Export DOCX để tạo file rồi mở bằng OnlyOffice." />
+              <EmptyState title="Chưa có file DOCX" description="Bấm Generate Word Preview để tạo file preview rồi mở bằng OnlyOffice." />
             )}
           </div>
         )}
@@ -849,6 +892,14 @@ function downloadBlob(blob, fileName) {
   link.click();
   link.remove();
   window.URL.revokeObjectURL(blobUrl);
+}
+
+async function waitForRef(ref, attempts = 10) {
+  for (let index = 0; index < attempts; index += 1) {
+    if (ref.current) return ref.current;
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+  }
+  return ref.current;
 }
 
 function renderDraftHtml(draft) {

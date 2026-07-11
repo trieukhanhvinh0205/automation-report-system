@@ -249,6 +249,23 @@ function buildTextShouldQuery(field, value) {
   };
 }
 
+function buildElkRequestConfig() {
+  return {
+    auth: {
+      username: process.env.ELK_USERNAME,
+      password: process.env.ELK_PASSWORD
+    },
+    headers: {
+      "Content-Type": "application/json"
+    },
+    httpsAgent: new https.Agent({
+      rejectUnauthorized: false
+    }),
+    proxy: false,
+    timeout: Number(process.env.ELK_TIMEOUT_MS || 30000)
+  };
+}
+
 function mapElkItem(item) {
   return {
     id: item._id,
@@ -292,18 +309,7 @@ async function searchElkReports(filters = {}) {
     const response = await axios.post(
       `${process.env.ELK_URL}/${process.env.ELK_INDEX}/_search`,
       query,
-      {
-        auth: {
-          username: process.env.ELK_USERNAME,
-          password: process.env.ELK_PASSWORD
-        },
-        headers: {
-          "Content-Type": "application/json"
-        },
-        httpsAgent: new https.Agent({
-          rejectUnauthorized: false
-        })
-      }
+      buildElkRequestConfig()
     );
 
     const total = response.data.hits.total;
@@ -314,6 +320,54 @@ async function searchElkReports(filters = {}) {
   } catch (error) {
     console.error("ELK ERROR:", error.response?.data || error.message);
     throw error;
+  }
+}
+
+async function scrollElkReports(filters = {}, { batchSize = 500, maxRows = 50000, scroll = "2m" } = {}) {
+  const rows = [];
+  let scrollId = null;
+
+  try {
+    const query = buildElkQuery({ ...filters, from: 0, size: batchSize });
+    delete query.from;
+    query.sort = ["_doc"];
+
+    const firstResponse = await axios.post(
+      `${process.env.ELK_URL}/${process.env.ELK_INDEX}/_search?scroll=${encodeURIComponent(scroll)}`,
+      query,
+      buildElkRequestConfig()
+    );
+
+    scrollId = firstResponse.data._scroll_id;
+    let hits = firstResponse.data.hits?.hits || [];
+    const total = normalizeTotal(firstResponse.data.hits?.total);
+
+    while (hits.length > 0 && rows.length < maxRows) {
+      rows.push(...hits.map(mapElkItem).slice(0, maxRows - rows.length));
+      if (rows.length >= maxRows || rows.length >= total) break;
+
+      const nextResponse = await axios.post(
+        `${process.env.ELK_URL}/_search/scroll`,
+        { scroll, scroll_id: scrollId },
+        buildElkRequestConfig()
+      );
+      scrollId = nextResponse.data._scroll_id;
+      hits = nextResponse.data.hits?.hits || [];
+    }
+
+    return { rows, total };
+  } catch (error) {
+    console.error("ELK SCROLL ERROR:", error.response?.data || error.message);
+    throw error;
+  } finally {
+    if (scrollId) {
+      axios
+        .delete(`${process.env.ELK_URL}/_search/scroll`, {
+          ...buildElkRequestConfig(),
+          data: { scroll_id: [scrollId] }
+        })
+        .catch(() => {});
+    }
   }
 }
 
@@ -331,18 +385,7 @@ async function getElkFilterOptions(filters = {}) {
     const response = await axios.post(
       `${process.env.ELK_URL}/${process.env.ELK_INDEX}/_search`,
       query,
-      {
-        auth: {
-          username: process.env.ELK_USERNAME,
-          password: process.env.ELK_PASSWORD
-        },
-        headers: {
-          "Content-Type": "application/json"
-        },
-        httpsAgent: new https.Agent({
-          rejectUnauthorized: false
-        })
-      }
+      buildElkRequestConfig()
     );
 
     return {
@@ -362,9 +405,14 @@ function bucketsToValues(buckets = []) {
   return buckets.map((bucket) => String(bucket.key)).filter(Boolean);
 }
 
+function normalizeTotal(total) {
+  return typeof total === "number" ? total : Number(total?.value || 0);
+}
+
 module.exports = {
   buildElkQuery,
   getElkFilterOptions,
   getElkReports,
+  scrollElkReports,
   searchElkReports
 };

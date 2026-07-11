@@ -11,7 +11,7 @@ import TemplateBuilderPage from "./TemplateBuilderPage";
 import {
   createReport,
   downloadFile,
-  exportElkWord,
+  exportElkFile,
   exportReport,
   getElkAlerts,
   getElkFilterOptions,
@@ -83,11 +83,15 @@ function DashboardPage() {
   }, [activeView, elkQuery]);
 
   async function handleElkExportWord(query) {
+    return handleElkExport("docx", query);
+  }
+
+  async function handleElkExport(format, query) {
     try {
-      await exportElkWord(query);
+      await exportElkFile(format, query);
       setElkError("");
     } catch (err) {
-      setElkError(err.response?.data?.message || "Failed to export Word");
+      setElkError(err.response?.data?.message || `Failed to export ${format.toUpperCase()}`);
     }
   }
 
@@ -208,6 +212,7 @@ function DashboardPage() {
             error={elkError}
             onRefresh={loadElkAlerts}
             onExportWord={handleElkExportWord}
+            onExportFile={handleElkExport}
             lastUpdated={elkLastUpdated}
           />
         ) : (

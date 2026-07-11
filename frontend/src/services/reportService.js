@@ -63,13 +63,20 @@ export async function getElkFilterOptions(filters = {}) {
 }
 
 export async function exportElkWord(filters = {}) {
-  const response = await apiClient.post("/reports/elk/export-word", filters, {
+  return exportElkFile("docx", filters);
+}
+
+export async function exportElkFile(format, filters = {}) {
+  const safeFormat = ["docx", "xlsx", "csv"].includes(format) ? format : "docx";
+  const response = await apiClient.post(`/reports/elk/export/${safeFormat}`, filters, {
     responseType: "blob"
   });
 
   const blobUrl = window.URL.createObjectURL(new Blob([response.data]));
   const link = document.createElement("a");
-  const filename = `elk_cases_${Date.now()}.docx`;
+  const disposition = response.headers?.["content-disposition"] || "";
+  const filenameMatch = disposition.match(/filename\*?=(?:UTF-8'')?"?([^";]+)"?/i);
+  const filename = filenameMatch ? decodeURIComponent(filenameMatch[1]) : `elk_cases_${Date.now()}.${safeFormat}`;
   link.href = blobUrl;
   link.download = filename;
   document.body.appendChild(link);

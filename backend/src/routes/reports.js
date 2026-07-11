@@ -13,12 +13,18 @@ const {
   exportReport
 } = require("../services/reportService");
 const config = require("../config");
-const { generateElkCasesDocx } = require("../utils/reportGenerator");
+const {
+  generateElkCasesCsv,
+  generateElkCasesDocx,
+  generateElkCasesXlsx
+} = require("../utils/reportGenerator");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
+const ELK_EXPORT_BATCH_SIZE = Number(process.env.ELK_EXPORT_BATCH_SIZE || 100);
+const ELK_EXPORT_MAX_ROWS = Number(process.env.ELK_EXPORT_MAX_ROWS || 50000);
 //ELK
-const { getElkFilterOptions, getElkReports, searchElkReports } = require("../services/elkService");
+const { getElkFilterOptions, scrollElkReports, searchElkReports } = require("../services/elkService");
 
 router.get(
   "/",
@@ -67,26 +73,51 @@ router.get(
 router.post(
   "/elk/export-word",
   asyncHandler(async (req, res) => {
-    const { title, ...filters } = req.body || {};
-
-    const rows = await getElkReports({
-      ...filters,
-      size: 500
-    });
-
-    const filename = `elk_cases_${Date.now()}.docx`;
-    const outputPath = path.join(config.uploadDir, filename);
-    await fs.promises.mkdir(config.uploadDir, { recursive: true });
-
-    await generateElkCasesDocx({
-      rows,
-      outputPath,
-      title: title || "ELK Cases Report"
-    });
-
-    return res.download(outputPath, filename);
+    return exportElkCases(req, res, "docx");
   })
 );
+
+router.post(
+  "/elk/export/:format",
+  asyncHandler(async (req, res) => {
+    const format = String(req.params.format || "").toLowerCase();
+    if (!["docx", "xlsx", "csv"].includes(format)) {
+      const err = new Error("Invalid ELK export format. Use docx, xlsx or csv");
+      err.status = 400;
+      throw err;
+    }
+    return exportElkCases(req, res, format);
+  })
+);
+
+async function exportElkCases(req, res, format) {
+  const { title, page: _page, size: _size, ...filters } = req.body || {};
+  const rows = await fetchAllElkRowsForExport(filters);
+  const filename = `elk_cases_${Date.now()}.${format}`;
+  const outputPath = path.join(config.uploadDir, filename);
+  await fs.promises.mkdir(config.uploadDir, { recursive: true });
+
+  if (format === "xlsx") {
+    await generateElkCasesXlsx({ rows, outputPath, title: title || "ELK Cases Report" });
+  } else if (format === "csv") {
+    await generateElkCasesCsv({ rows, outputPath, title: title || "ELK Cases Report" });
+  } else {
+    await generateElkCasesDocx({ rows, outputPath, title: title || "ELK Cases Report" });
+  }
+
+  res.setHeader("X-Exported-Rows", String(rows.length));
+  res.setHeader("Access-Control-Expose-Headers", "Content-Disposition, X-Exported-Rows");
+  return res.download(outputPath, filename);
+}
+
+async function fetchAllElkRowsForExport(filters) {
+  const result = await scrollElkReports(filters, {
+    batchSize: ELK_EXPORT_BATCH_SIZE,
+    maxRows: ELK_EXPORT_MAX_ROWS
+  });
+  console.log(`[ELK export] fetched ${result.rows.length}/${result.total || "unknown"} rows`);
+  return result.rows;
+}
 
 router.get(
   "/:id",

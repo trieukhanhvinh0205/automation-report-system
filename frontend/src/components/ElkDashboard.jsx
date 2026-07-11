@@ -153,7 +153,7 @@ function padTimePart(value) {
 const HOURS = Array.from({ length: 24 }, (_, index) => String(index).padStart(2, "0"));
 const MINUTES_SECONDS = Array.from({ length: 60 }, (_, index) => String(index).padStart(2, "0"));
 
-function ElkDashboard({ alerts, meta, filterOptions, loading, error, onRefresh, onExportWord, lastUpdated }) {
+function ElkDashboard({ alerts, meta, filterOptions, loading, error, onRefresh, onExportWord, onExportFile, lastUpdated }) {
   const [tenantFilter, setTenantFilter] = useState("all");
   const [analystFilter, setAnalystFilter] = useState("all");
   const [severityFilter, setSeverityFilter] = useState("all");
@@ -301,7 +301,16 @@ function ElkDashboard({ alerts, meta, filterOptions, loading, error, onRefresh, 
   }
 
   function handleExportWord() {
-    onExportWord(buildQueryForBackend());
+    handleExportFile("docx");
+  }
+
+  function handleExportFile(format) {
+    const { page: _page, size: _size, ...exportQuery } = buildQueryForBackend();
+    if (format === "docx" && onExportWord) {
+      onExportWord(exportQuery);
+      return;
+    }
+    onExportFile?.(format, exportQuery);
   }
 
   function goToPage(nextPage) {
@@ -355,6 +364,12 @@ function ElkDashboard({ alerts, meta, filterOptions, loading, error, onRefresh, 
           </Button>
           <Button appearance="primary" type="button" onClick={handleExportWord} disabled={loading}>
             Export Word
+          </Button>
+          <Button type="button" onClick={() => handleExportFile("xlsx")} disabled={loading}>
+            Export XLSX
+          </Button>
+          <Button type="button" onClick={() => handleExportFile("csv")} disabled={loading}>
+            Export CSV
           </Button>
           <Button type="button" onClick={resetFilters}>
             Reset Filters

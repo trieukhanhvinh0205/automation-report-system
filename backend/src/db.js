@@ -9,8 +9,12 @@ const pool = new Pool({
   database: config.db.database
 });
 
-pool.connect()
-  .then(() => console.log("✅ Connected to PostgreSQL"))
-  .catch(err => console.error("❌ DB Error:", err));
+pool
+  .connect()
+  .then((client) => {
+    client.release();
+    console.log("Connected to PostgreSQL");
+  })
+  .catch((err) => console.error("DB Error:", err));
 
 module.exports = pool;

@@ -318,35 +318,56 @@ function buildElkRequestConfig() {
 }
 
 function mapElkItem(item) {
+  const source = item._source || {};
   return {
     id: item._id,
-    rawSource: item._source,
-    timestamp: item._source["@timestamp"],
-    alertName: item._source.siem_alert_name,
-    description: item._source.description || item._source.alert_description || item._source.siem_alert_description || item._source.message,
-    severity: item._source.severity,
-    priority: item._source.priority,
-    tactics: item._source.mitre_tactic,
-    techniques: item._source.mitre_technique,
-    resolution: item._source.resolution,
-    analyst: item._source.user_closed_case,
-    tenant: item._source.tenant,
-    status: item._source.status,
-    reasonCloseCase: item._source.reason_close_case,
-    openCaseTime: item._source.open_case_time,
-    caseAnalyzedTime: item._source.case_analyzed_time,
-    caseDetectedTime: item._source.case_detected_time,
-    soarId: item._source.soar_id,
-    siemAlertId: item._source.siem_alert_id,
-    soarCaseName: item._source.soar_case_name,
-    platform: item._source.platform,
-    sla: item._source.sla,
-    messageConfirmCase: item._source.message_confirm_case,
-    handlingDetail: item._source.handling_detail || item._source.handlingDetail || item._source.detail,
-    timeDiffMinutes: item._source.timeDiffMinutes,
-    timeDetectedToAnalyzedMinutes: item._source.timeDetectedtoAnalyzedMinutes,
-    timeOpenToDetectedMinutes: item._source.timeOpentoDetectedMinutes
+    rawSource: source,
+    timestamp: source["@timestamp"],
+    alertName: source.siem_alert_name,
+    description: source.description || source.alert_description || source.siem_alert_description || source.message,
+    severity: source.severity,
+    priority: source.priority,
+    tactics: source.mitre_tactic,
+    techniques: source.mitre_technique,
+    resolution: source.resolution,
+    analyst: source.user_closed_case,
+    tenant: source.tenant,
+    status: source.status,
+    reasonCloseCase: source.reason_close_case,
+    openCaseTime: source.open_case_time,
+    closedCaseTime: firstSourceValue(source, [
+      "closed_case_time",
+      "case_closed_time",
+      "close_case_time",
+      "case_close_time",
+      "closed_time",
+      "close_time",
+      "case_closed_at",
+      "closed_at",
+      "resolved_time",
+      "case_resolved_time",
+      "case_analyzed_time"
+    ]),
+    caseAnalyzedTime: source.case_analyzed_time,
+    caseDetectedTime: source.case_detected_time,
+    soarId: source.soar_id,
+    siemAlertId: source.siem_alert_id,
+    soarCaseName: source.soar_case_name,
+    platform: source.platform,
+    sla: source.sla,
+    messageConfirmCase: source.message_confirm_case,
+    handlingDetail: source.handling_detail || source.handlingDetail || source.detail,
+    timeDiffMinutes: source.timeDiffMinutes,
+    timeDetectedToAnalyzedMinutes: source.timeDetectedtoAnalyzedMinutes,
+    timeOpenToDetectedMinutes: source.timeOpentoDetectedMinutes
   };
+}
+
+function firstSourceValue(source, keys = []) {
+  for (const key of keys) {
+    if (source[key] !== undefined && source[key] !== null && source[key] !== "") return source[key];
+  }
+  return undefined;
 }
 
 async function getElkReports(filters = {}) {

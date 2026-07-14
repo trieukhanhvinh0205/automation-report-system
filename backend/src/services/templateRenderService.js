@@ -83,8 +83,46 @@ function renderTable(rows, configuredColumns = []) {
 
 function getSectionColumns(section) {
   const configured = section.data_binding?.row_template?.columns || section.config?.data_binding?.row_template?.columns || [];
-  if (Array.isArray(configured) && configured.length > 0) return configured;
-  return getColumnsForSection(section.section_key) || [];
+  const columns = Array.isArray(configured) && configured.length > 0 ? configured : getColumnsForSection(section.section_key) || [];
+  return normalizeReportAlertColumns(section.section_key, columns);
+}
+
+function normalizeReportAlertColumns(sectionKey, columns = []) {
+  if (!["operation_alerts", "security_alerts", "incident_alerts"].includes(sectionKey)) return columns;
+  const hiddenKeys = new Set(["tactics", "techniques", "tenant", "platform"]);
+  const hiddenLabels = new Set(["mitre tactics", "mitre techniques", "tenant", "nền tảng", "nen tang"]);
+
+  const visibleColumns = columns.filter((column) => {
+    const key = typeof column === "string" ? column : column?.key;
+    const label = typeof column === "string" ? column : column?.label || key;
+    return !hiddenKeys.has(String(key || "").toLowerCase()) && !hiddenLabels.has(normalizeText(label));
+  });
+
+  if (visibleColumns.some((column) => getColumnKey(column) === "case_closed_time")) return visibleColumns;
+
+  const closeTimeColumn = { key: "case_closed_time", label: "Thời gian đóng case" };
+  const createdTimeIndex = visibleColumns.findIndex((column) => getColumnKey(column) === "case_created_time");
+  if (createdTimeIndex === -1) return [...visibleColumns, closeTimeColumn];
+
+  return [
+    ...visibleColumns.slice(0, createdTimeIndex + 1),
+    closeTimeColumn,
+    ...visibleColumns.slice(createdTimeIndex + 1)
+  ];
+}
+
+function getColumnKey(column) {
+  return String(typeof column === "string" ? column : column?.key || "").toLowerCase();
+}
+
+function normalizeText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D")
+    .toLowerCase()
+    .trim();
 }
 
 function normalizeColumns(rows, configuredColumns = []) {

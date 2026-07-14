@@ -93,16 +93,13 @@ function getColumnsForSection(sectionKey) {
       { key: "priority", label: "Độ ưu tiên" },
       { key: "detected_time", label: "Thời gian phát hiện" },
       { key: "case_created_time", label: "Thời gian tạo case" },
+      { key: "case_closed_time", label: "Thời gian đóng case" },
       { key: "description", label: "Cảnh báo" },
       { key: "status", label: "Xử lý" },
       { key: "sla", label: "Đáp ứng SLA" },
       { key: "handling_detail", label: "Chi tiết xử lý" },
       { key: "analyst", label: "Chuyên viên xử lý" },
-      { key: "tactics", label: "MITRE Tactics" },
-      { key: "techniques", label: "MITRE Techniques" },
-      { key: "resolution", label: "Kết luận xử lý" },
-      { key: "tenant", label: "Tenant" },
-      { key: "platform", label: "Nền tảng" }
+      { key: "resolution", label: "Kết luận xử lý" }
     ];
   }
 

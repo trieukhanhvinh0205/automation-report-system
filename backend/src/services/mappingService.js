@@ -213,8 +213,9 @@ function mapAlertRow(row, index = 0) {
     stt: index + 1,
     offense_id: row.soarId || row.siemAlertId || row.id,
     siem_rule: row.alertName || row.soarCaseName,
-    detected_time: row.caseDetectedTime || row.timestamp,
-    case_created_time: row.openCaseTime,
+    detected_time: formatTableDateTime(row.caseDetectedTime || row.timestamp),
+    case_created_time: formatTableDateTime(row.openCaseTime),
+    case_closed_time: formatTableDateTime(row.closedCaseTime || row.caseAnalyzedTime),
     description: buildDescriptionWithConfirmKeyword(row.description || row.reasonCloseCase || row.messageConfirmCase || row.resolution || "", confirmKeyword),
     status: row.status === false ? "Đã đóng" : String(row.status ?? ""),
     sla: row.sla === false ? "Không đáp ứng" : row.sla === true ? "Đáp ứng" : "",
@@ -336,6 +337,18 @@ function formatViDateTime(value) {
   const dd = String(date.getUTCDate()).padStart(2, "0");
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
   return `${hh}h${mm} ngày ${dd}/${month}/${date.getUTCFullYear()}`;
+}
+
+function formatTableDateTime(value) {
+  if (!value) return "";
+  const date = toVietnamDate(value);
+  if (!date) return String(value);
+  const hh = String(date.getUTCHours()).padStart(2, "0");
+  const mm = String(date.getUTCMinutes()).padStart(2, "0");
+  const ss = String(date.getUTCSeconds()).padStart(2, "0");
+  const dd = String(date.getUTCDate()).padStart(2, "0");
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  return `${dd}/${month}/${date.getUTCFullYear()} ${hh}:${mm}:${ss}`;
 }
 
 function formatViDate(value) {

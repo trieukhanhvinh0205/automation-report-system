@@ -1,6 +1,30 @@
+# node_modules/
+# .env
+# .env.example
+# uploads/
+# dist/
+# build/automation_report_local.sql
+
+# # Local database backup
+# /automation_report_local.sql
+
+# node_modules/
+# .env
+# .env.example
+# uploads/
+# dist/
+
+# # Local database backup
+# /automation_report_local.sql
+# *.backup
+# *.sql
+
 node_modules/
 .env
 .env.example
 uploads/
 dist/
-build/automation_report_local.sql
+
+# Local database backup
+/automation_report_local.sql
+*.backup

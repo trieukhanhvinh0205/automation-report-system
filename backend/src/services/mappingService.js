@@ -1,5 +1,5 @@
 const pool = require("../db");
-const { searchElkReports } = require("./elkService");
+const { searchElkReports, searchElkSeveritySummary } = require("./elkService");
 
 const DEFAULT_ELK_TABLE_LIMIT = 10000;
 const ELK_BATCH_SIZE = 500;
@@ -12,6 +12,7 @@ async function resolveFields(templateJson, context = {}) {
   const fields = templateJson.fields || [];
 
   await hydrateCustomer(values, context.customer_id || templateJson.customer_id);
+  hydrateReportPeriod(values);
 
   for (const field of fields) {
     if (values[field.field_key] !== undefined && values[field.field_key] !== "") continue;
@@ -58,6 +59,15 @@ async function hydrateCustomer(values, customerId) {
   values.customer_tenant = values.customer_tenant || customer.tenant || customer.code;
 }
 
+function hydrateReportPeriod(values) {
+  if (values.report_period_label) return;
+  if (values.report_month && values.report_year) {
+    values.report_period_label = `${values.report_month}/${values.report_year}`;
+    return;
+  }
+  values.report_period_label = buildReportPeriodLabelFromDates(values.monitoring_start, values.monitoring_end);
+}
+
 async function resolveField(field, values) {
   if (field.source_type === "manual") return field.default_value ?? "";
   if (field.source_type === "postgres") return resolvePostgresField(field, values);
@@ -90,13 +100,19 @@ async function resolveElkField(field, values) {
     return result.total;
   }
 
-  const rows = await resolveElkRows({ filters, config, values });
+  if (mode === "severity_summary") return searchElkSeveritySummary(filters);
+
+  if (ALERT_TABLE_FIELDS.has(field.field_key)) {
+    values[`__summary_${field.field_key}`] = await searchElkSeveritySummary(filters);
+  }
+
+  const detailFilters = applyConfirmedOnlyFilter(field, config, filters);
+  const rows = await resolveElkRows({ filters: detailFilters, config, values });
   const mappedRows = rows.map((row, index) => mapAlertRow(row, index));
   if (ALERT_TABLE_FIELDS.has(field.field_key)) {
     values[`__all_${field.field_key}`] = mappedRows;
   }
 
-  if (mode === "severity_summary") return buildSeveritySummary(rows);
   if (field.field_key === "mitre_summary") return buildMitreSummary(rows);
 
   const detailRows = shouldKeepOnlyConfirmedDetailRows(field, config, filters)
@@ -139,6 +155,16 @@ function isReportTableField(config = {}) {
 
 function shouldKeepOnlyConfirmedDetailRows(field, config = {}, filters = {}) {
   return ALERT_TABLE_FIELDS.has(field.field_key) && config.confirmed_only !== false && filters.confirmed_only !== false;
+}
+
+function applyConfirmedOnlyFilter(field, config = {}, filters = {}) {
+  if (config.confirmed_only === false || filters.confirmed_only === false) return filters;
+  if (field.source_type !== "elk") return filters;
+
+  return {
+    ...filters,
+    confirmKeywordOnly: true
+  };
 }
 
 function computeField(field, values) {
@@ -303,8 +329,8 @@ function resolveTemplateValue(template, values) {
 
 function formatViDateTime(value) {
   if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
+  const date = toVietnamDate(value);
+  if (!date) return String(value);
   const hh = String(date.getUTCHours()).padStart(2, "0");
   const mm = String(date.getUTCMinutes()).padStart(2, "0");
   const dd = String(date.getUTCDate()).padStart(2, "0");
@@ -314,11 +340,30 @@ function formatViDateTime(value) {
 
 function formatViDate(value) {
   if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
+  const date = toVietnamDate(value);
+  if (!date) return String(value);
   const dd = String(date.getUTCDate()).padStart(2, "0");
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
   return `${dd}/${month}/${date.getUTCFullYear()}`;
+}
+
+function buildReportPeriodLabelFromDates(startValue, endValue) {
+  const start = toVietnamDate(startValue);
+  const end = toVietnamDate(endValue);
+  if (!start || !end) return "";
+  const sameMonth =
+    start.getUTCFullYear() === end.getUTCFullYear() &&
+    start.getUTCMonth() === end.getUTCMonth();
+  if (sameMonth) {
+    return `${String(start.getUTCMonth() + 1).padStart(2, "0")}/${start.getUTCFullYear()}`;
+  }
+  return `${formatViDate(startValue)} - ${formatViDate(endValue)}`;
+}
+
+function toVietnamDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Date(date.getTime() + 7 * 60 * 60 * 1000);
 }
 
 module.exports = {

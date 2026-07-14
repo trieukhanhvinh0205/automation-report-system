@@ -34,6 +34,19 @@ const upload = multer({
   }
 });
 
+function buildRenderContext(body = {}, template = {}) {
+  return {
+    customer_id: body.customer_id || template.customer_id,
+    monitoring_start: body.monitoring_start,
+    monitoring_end: body.monitoring_end,
+    report_month: body.report_month,
+    report_year: body.report_year,
+    report_period_type: body.report_period_type,
+    report_period_label: body.report_period_label,
+    overrides: body.overrides || {}
+  };
+}
+
 router.post(
   "/upload",
   upload.array("files", 8),
@@ -244,14 +257,7 @@ router.post(
   "/:id/preview",
   asyncHandler(async (req, res) => {
     const template = await getTemplateDetail(Number(req.params.id));
-    const context = {
-      customer_id: req.body.customer_id || template.customer_id,
-      monitoring_start: req.body.monitoring_start,
-      monitoring_end: req.body.monitoring_end,
-      report_month: req.body.report_month,
-      report_year: req.body.report_year,
-      overrides: req.body.overrides || {}
-    };
+    const context = buildRenderContext(req.body, template);
     const resolved = await resolveFields(template.template_json, context);
     const html = renderTemplateHtml(template.template_json, resolved.values);
     res.json({
@@ -279,14 +285,7 @@ router.post(
     }
 
     const template = await getTemplateDetail(Number(req.params.id));
-    const context = {
-      customer_id: req.body.customer_id || template.customer_id,
-      monitoring_start: req.body.monitoring_start,
-      monitoring_end: req.body.monitoring_end,
-      report_month: req.body.report_month,
-      report_year: req.body.report_year,
-      overrides: req.body.overrides || {}
-    };
+    const context = buildRenderContext(req.body, template);
     const resolved = await resolveFields(template.template_json, context);
     if (resolved.errors.length > 0) {
       const err = new Error("Cannot export because required fields are missing");
@@ -316,14 +315,7 @@ router.post(
   "/:id/templateize",
   asyncHandler(async (req, res) => {
     const template = await getTemplateDetail(Number(req.params.id));
-    const context = {
-      customer_id: req.body.customer_id || template.customer_id,
-      monitoring_start: req.body.monitoring_start,
-      monitoring_end: req.body.monitoring_end,
-      report_month: req.body.report_month,
-      report_year: req.body.report_year,
-      overrides: req.body.overrides || {}
-    };
+    const context = buildRenderContext(req.body, template);
     const resolved = await resolveFields(template.template_json, context);
     const dir = path.join(config.uploadDir, "templates");
     await fs.promises.mkdir(dir, { recursive: true });

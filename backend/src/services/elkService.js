@@ -34,6 +34,7 @@ function buildElkQuery({
   maxDetectedToAnalyzedMinutes,
   minOpenToDetectedMinutes,
   maxOpenToDetectedMinutes,
+  confirmKeywordOnly,
   q,
   from = 0,
   size = 200
@@ -213,6 +214,10 @@ function buildElkQuery({
     });
   }
 
+  if (confirmKeywordOnly === true || String(confirmKeywordOnly).toLowerCase() === "true") {
+    must.push(buildConfirmKeywordQuery());
+  }
+
   return {
     track_total_hits: true,
     from: Number(from || 0),
@@ -245,6 +250,52 @@ function buildTextShouldQuery(field, value) {
         { match_phrase: { [field]: value } },
         { match: { [field]: value } }
       ]
+    }
+  };
+}
+
+function buildConfirmKeywordQuery() {
+  const fields = [
+    "description",
+    "alert_description",
+    "siem_alert_description",
+    "message",
+    "message_confirm_case",
+    "reason_close_case",
+    "resolution",
+    "soar_case_name",
+    "siem_alert_name",
+    "handling_detail"
+  ];
+  const phrases = [
+    "Đã Confirm KH",
+    "Da Confirm KH",
+    "Đã báo KH",
+    "Da bao KH",
+    "Confirm KH",
+    "KH confirm"
+  ];
+  const wildcards = [
+    "*confirm*kh*",
+    "*kh*confirm*",
+    "*báo*kh*",
+    "*bao*kh*"
+  ];
+
+  return {
+    bool: {
+      minimum_should_match: 1,
+      should: fields.flatMap((field) => [
+        ...phrases.map((phrase) => ({ match_phrase: { [field]: phrase } })),
+        ...wildcards.map((value) => ({
+          wildcard: {
+            [`${field}.keyword`]: {
+              value,
+              case_insensitive: true
+            }
+          }
+        }))
+      ])
     }
   };
 }
@@ -319,6 +370,33 @@ async function searchElkReports(filters = {}) {
     };
   } catch (error) {
     console.error("ELK ERROR:", error.response?.data || error.message);
+    throw error;
+  }
+}
+
+async function searchElkSeveritySummary(filters = {}) {
+  try {
+    const query = buildElkQuery({ ...filters, from: 0, size: 0 });
+    query.aggs = {
+      severities: { terms: { field: "severity.keyword", size: 100 } }
+    };
+
+    const response = await axios.post(
+      `${process.env.ELK_URL}/${process.env.ELK_INDEX}/_search`,
+      query,
+      buildElkRequestConfig()
+    );
+
+    const summary = { critical: 0, high: 0, medium: 0, low: 0 };
+    const buckets = response.data.aggregations?.severities?.buckets || [];
+    buckets.forEach((bucket) => {
+      const key = String(bucket.key || "").toLowerCase();
+      if (summary[key] !== undefined) summary[key] = Number(bucket.doc_count || 0);
+    });
+
+    return summary;
+  } catch (error) {
+    console.error("ELK SEVERITY SUMMARY ERROR:", error.response?.data || error.message);
     throw error;
   }
 }
@@ -414,5 +492,6 @@ module.exports = {
   getElkFilterOptions,
   getElkReports,
   scrollElkReports,
+  searchElkSeveritySummary,
   searchElkReports
 };

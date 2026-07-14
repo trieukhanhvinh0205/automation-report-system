@@ -28,6 +28,7 @@ function baseFields() {
     field("customer_tenant", "ELK tenant", "text", "postgres", null, true),
     field("report_month", "Tháng báo cáo", "text", "manual", null, false),
     field("report_year", "Năm báo cáo", "text", "manual", null, false),
+    field("report_period_label", "Nhãn kỳ báo cáo", "text", "manual", null, false),
     field("monitoring_start", "Thời gian bắt đầu", "datetime", "manual", null, true),
     field("monitoring_end", "Thời gian kết thúc", "datetime", "manual", null, true),
     field("monitoring_start_text", "Thời gian bắt đầu dạng text", "text", "computed", null, false),

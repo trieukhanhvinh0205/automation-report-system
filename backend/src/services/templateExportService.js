@@ -123,6 +123,7 @@ async function tryRenderSourceDocx({ sourceDocx, templateJson, values, outputPat
       console.warn("DOCX template has no placeholders. Falling back to generated DOCX to avoid stale static report data.");
       return false;
     }
+    normalizeReportPeriodPlaceholders(zip);
 
     const doc = new Docxtemplater(zip, {
       paragraphLoop: true,
@@ -132,6 +133,7 @@ async function tryRenderSourceDocx({ sourceDocx, templateJson, values, outputPat
     });
 
     doc.render(flattenValuesForDocx(values));
+    replaceRenderedReportPeriod(doc.getZip(), values);
     const buffer = doc.getZip().generate({ type: "nodebuffer" });
     await fs.promises.writeFile(outputPath, buffer);
     return true;
@@ -174,6 +176,50 @@ function templateizeStaticDocxZip(zip, templateJson, values) {
   });
 }
 
+function normalizeReportPeriodPlaceholders(zip) {
+  const replacements = [
+    {
+      from: "{{report_month}}/{{report_year}}",
+      to: "{{report_period_label}}"
+    }
+  ];
+
+  zip.file(/word\/(document|header\d+|footer\d+|footnotes|endnotes)\.xml/).forEach((file) => {
+    let xml = file.asText();
+    const originalXml = xml;
+    xml = replaceParagraphText(xml, replacements);
+    xml = replaceXmlText(xml, "{{report_month}}/{{report_year}}", "{{report_period_label}}");
+    if (xml !== originalXml) {
+      zip.file(file.name, xml);
+    }
+  });
+}
+
+function replaceRenderedReportPeriod(zip, values = {}) {
+  const label = String(values.report_period_label || "").trim();
+  if (!label) return;
+
+  const replacements = [
+    {
+      pattern: /(Kỳ báo cáo:\s*)(?:\d{1,2}\/\d{4}|Quý\s*\d+\/\d{4}|Năm\s*\d{4}|Ngày\s*\d{1,2}\/\d{1,2}\/\d{4}|Tuần\s*[^<\n]+)/gi,
+      to: `$1${label}`
+    },
+    {
+      pattern: /(Tháng\s*)(?:\d{1,2}\/\d{4}|Quý\s*\d+\/\d{4}|Năm\s*\d{4})/gi,
+      to: `$1${label}`
+    }
+  ];
+
+  zip.file(/word\/(document|header\d+|footer\d+|footnotes|endnotes)\.xml/).forEach((file) => {
+    let xml = file.asText();
+    const originalXml = xml;
+    xml = replaceParagraphText(xml, replacements);
+    if (xml !== originalXml) {
+      zip.file(file.name, xml);
+    }
+  });
+}
+
 function buildStaticReplacementMap(templateJson, values) {
   const pairs = [];
   const fields = templateJson.fields || [];
@@ -189,6 +235,7 @@ function buildStaticReplacementMap(templateJson, values) {
   addReplacement(pairs, values.customer_full_name, "{{customer_full_name}}", values.customer_full_name);
   addReplacement(pairs, values.customer_code, "{{customer_code}}", values.customer_code);
   addReplacement(pairs, values.security_status, "{{security_status}}", values.security_status);
+  addReplacement(pairs, values.report_period_label, "{{report_period_label}}", values.report_period_label);
 
   // Common SOC report sentences are often static in the old report. Convert them
   // into template expressions so a non-template DOCX can still be reused.
@@ -211,12 +258,12 @@ function buildStaticReplacementMap(templateJson, values) {
 
   pairs.push({
     pattern: /(Kỳ báo cáo:\s*)\d{1,2}\/\d{4}/gi,
-    to: "$1{{report_month}}/{{report_year}}"
+    to: "$1{{report_period_label}}"
   });
 
   pairs.push({
     pattern: /(Tháng\s*)\d{1,2}\/\d{4}/gi,
-    to: "$1{{report_month}}/{{report_year}}"
+    to: "$1{{report_period_label}}"
   });
 
   pairs.push({
@@ -384,6 +431,11 @@ function findTemplateizationSourceDocx(templateJson) {
 
 function flattenValuesForDocx(values) {
   const output = { ...values };
+  const periodParts = splitReportPeriodForLegacyPlaceholders(values);
+  if (periodParts) {
+    output.report_month = periodParts.month;
+    output.report_year = periodParts.year;
+  }
   Object.entries(values || {}).forEach(([key, value]) => {
     if (value && typeof value === "object" && !Array.isArray(value)) {
       flattenNested(key, value, output);
@@ -400,6 +452,19 @@ function flattenNested(prefix, value, output) {
       flattenNested(pathKey, child, output);
     }
   });
+}
+
+function splitReportPeriodForLegacyPlaceholders(values = {}) {
+  const label = String(values.report_period_label || "").trim();
+  if (!label) return null;
+
+  const quarterMatch = label.match(/^Quý\s*(\d+)\/(\d{4})$/i);
+  if (quarterMatch) return { month: `Quý ${quarterMatch[1]}`, year: quarterMatch[2] };
+
+  const monthMatch = label.match(/^(\d{1,2})\/(\d{4})$/);
+  if (monthMatch) return { month: monthMatch[1].padStart(2, "0"), year: monthMatch[2] };
+
+  return { month: label, year: "" };
 }
 
 function objectToRows(data) {
@@ -432,7 +497,7 @@ function safeSheetName(value) {
 
 function buildPrettyFileName({ templateJson, values, format }) {
   const customerCode = slug(values.customer_code || values.customer_tenant || "customer");
-  const period = slug(`${values.report_year || "yyyy"}-${values.report_month || "mm"}`);
+  const period = slug(values.report_period_label || `${values.report_year || "yyyy"}-${values.report_month || "mm"}`);
   const templateType = slug(templateJson.template_type || "soc-report");
   return `${customerCode}_${templateType}_${period}_${Date.now()}.${format}`;
 }

@@ -34,7 +34,7 @@ function extractSections(rawText = "", sourceFiles = []) {
     }
   };
 
-  push(DEFAULT_SECTIONS[0], "BÁO CÁO ĐỊNH KỲ\n{{customer_full_name}} ({{customer_code}})\nKỳ báo cáo: {{report_month}}/{{report_year}}");
+  push(DEFAULT_SECTIONS[0], "BÁO CÁO ĐỊNH KỲ\n{{customer_full_name}} ({{customer_code}})\nKỳ báo cáo: {{report_period_label}}");
 
   if (/bảo mật|confidential/i.test(text)) push(DEFAULT_SECTIONS[1]);
   if (/viết tắt|abbreviation/i.test(text)) push(DEFAULT_SECTIONS[2]);

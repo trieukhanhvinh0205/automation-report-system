@@ -103,8 +103,16 @@ function normalizeColumns(rows, configuredColumns = []) {
 }
 
 function renderText(template, values) {
-  const text = String(template || "").replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, key) => formatValue(getValue(values, key)));
+  const normalizedTemplate = normalizeReportPeriodText(template);
+  const text = normalizedTemplate.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, key) => formatValue(getValue(values, key)));
   return escapeHtml(text).replace(/\n/g, "<br />");
+}
+
+function normalizeReportPeriodText(template) {
+  return String(template || "")
+    .replace(/\{\{\s*report_month\s*\}\}\s*\/\s*\{\{\s*report_year\s*\}\}/g, "{{report_period_label}}")
+    .replace(/(K[ỳy]\s*b[áa]o\s*c[áa]o\s*:\s*)\d{1,2}\/\d{4}/giu, "$1{{report_period_label}}")
+    .replace(/(Th[áa]ng\s*)\d{1,2}\/\d{4}/giu, "$1{{report_period_label}}");
 }
 
 function getValue(values, path) {

@@ -3,4 +3,4 @@ node_modules/
 .env.example
 uploads/
 dist/
-build/
+build/automation_report_local.sql

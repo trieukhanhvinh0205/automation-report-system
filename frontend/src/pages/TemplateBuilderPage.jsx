@@ -42,6 +42,16 @@ import { EmptyState } from "../components/ui/Feedback";
 import OnlyOfficeEditor from "../components/OnlyOfficeEditor";
 
 const STEP_LABELS = ["Upload", "Review", "Builder", "Mapping", "Preview"];
+const PREVIEW_PERIODS = [
+  { value: "day", label: "Theo ngày" },
+  { value: "week", label: "Theo tuần" },
+  { value: "month", label: "Theo tháng" },
+  { value: "quarter", label: "Theo quý" },
+  { value: "year", label: "Theo năm" },
+  { value: "custom", label: "Tùy chỉnh" }
+];
+const HOURS = Array.from({ length: 24 }, (_, index) => String(index).padStart(2, "0"));
+const MINUTES_SECONDS = Array.from({ length: 60 }, (_, index) => String(index).padStart(2, "0"));
 
 function TemplateBuilderPage() {
   const [step, setStep] = useState(0);
@@ -629,14 +639,16 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
   const wordPreviewRef = useRef(null);
   const defaultStart = "2026-04-30T00:00:00.000Z";
   const defaultEnd = "2026-05-31T23:59:59.999Z";
-  const [context, setContext] = useState({
+  const [periodMode, setPeriodMode] = useState("month");
+  const [periodAnchorDate, setPeriodAnchorDate] = useState(formatVietnameseDate(fromVietnamIso(defaultEnd)));
+  const [context, setContext] = useState(() => syncReportPeriod({
     customer_id: templateDetail?.customer_id || 1,
     monitoring_start: defaultStart,
     monitoring_end: defaultEnd,
-    report_month: inferReportMonth(defaultEnd),
-    report_year: inferReportYear(defaultEnd),
+    report_period_type: "month",
+    report_period_label: buildReportPeriodLabel("month", defaultStart, defaultEnd),
     overrides: { security_status: "An toàn" }
-  });
+  }));
   const [preview, setPreview] = useState(null);
   const [activePreviewTab, setActivePreviewTab] = useState("fields");
   const [fieldViewMode, setFieldViewMode] = useState("markdown");
@@ -731,6 +743,38 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
 
   if (!draft) return <EmptyPanel text="Chưa có template để preview." />;
 
+  function applyPeriod(nextMode = periodMode, nextAnchorDate = periodAnchorDate) {
+    setPeriodMode(nextMode);
+    setPeriodAnchorDate(nextAnchorDate);
+    if (nextMode === "custom") {
+      setContext(syncReportPeriod({
+        ...context,
+        report_period_type: "custom"
+      }));
+      return;
+    }
+
+    const nextRange = buildMonitoringRange(nextMode, nextAnchorDate);
+    if (!nextRange) return;
+
+    setContext(syncReportPeriod({
+      ...context,
+      monitoring_start: nextRange.start,
+      monitoring_end: nextRange.end,
+      report_period_type: nextMode,
+      report_period_label: buildReportPeriodLabel(nextMode, nextRange.start, nextRange.end)
+    }));
+  }
+
+  function updateMonitoring(field, value) {
+    setPeriodMode("custom");
+    const nextContext = { ...context, [field]: value, report_period_type: "custom" };
+    setContext(syncReportPeriod({
+      ...nextContext,
+      report_period_label: buildReportPeriodLabel("custom", nextContext.monitoring_start, nextContext.monitoring_end)
+    }));
+  }
+
   return (
     <div className="preview-layout">
       <Card className="panel preview-controls">
@@ -745,17 +789,34 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
         <Field label="Customer ID">
           <Input value={String(context.customer_id)} onChange={(_, data) => setContext({ ...context, customer_id: data.value })} />
         </Field>
-        <Field label="Monitoring Start">
-          <Input
-            value={context.monitoring_start}
-            onChange={(_, data) => setContext(syncReportPeriod({ ...context, monitoring_start: data.value }))}
+        <div className="period-controls">
+          <Field label="Kỳ báo cáo">
+            <Select value={periodMode} onChange={(event) => applyPeriod(event.target.value, periodAnchorDate)}>
+              {PREVIEW_PERIODS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <TemplateDatePicker
+            label="Ngày tham chiếu"
+            value={periodAnchorDate}
+            onChange={(value) => applyPeriod(periodMode, value)}
           />
-        </Field>
-        <Field label="Monitoring End">
-          <Input
-            value={context.monitoring_end}
-            onChange={(_, data) => setContext(syncReportPeriod({ ...context, monitoring_end: data.value }))}
-          />
+        </div>
+        <TemplateDateTimeInput
+          label="Monitoring Start (giờ Việt Nam)"
+          value={context.monitoring_start}
+          onChange={(value) => updateMonitoring("monitoring_start", value)}
+        />
+        <TemplateDateTimeInput
+          label="Monitoring End (giờ Việt Nam)"
+          value={context.monitoring_end}
+          onChange={(value) => updateMonitoring("monitoring_end", value)}
+        />
+        <Field label="Kỳ báo cáo hiển thị">
+          <Input value={context.report_period_label || ""} readOnly />
         </Field>
         <Field label="Report Month">
           <Input
@@ -863,6 +924,262 @@ function EmptyPanel({ text }) {
   );
 }
 
+function TemplateDateTimeInput({ label, value, onChange }) {
+  const parts = splitIsoToVietnameseDateTime(value);
+
+  function update(patch) {
+    const nextParts = { ...parts, ...patch };
+    const nextIso = vietnamesePartsToIso(nextParts);
+    if (nextIso) onChange(nextIso);
+  }
+
+  return (
+    <Field label={label}>
+      <div className="vn-datetime-control template-datetime-control">
+        <TemplateDatePicker
+          label=""
+          value={parts.date}
+          onChange={(date) => update({ date })}
+          hideLabel
+        />
+        <Select aria-label={`${label} hour`} value={parts.hour} onChange={(event) => update({ hour: event.target.value })}>
+          {HOURS.map((hour) => (
+            <option key={hour} value={hour}>
+              {hour}
+            </option>
+          ))}
+        </Select>
+        <Select aria-label={`${label} minute`} value={parts.minute} onChange={(event) => update({ minute: event.target.value })}>
+          {MINUTES_SECONDS.map((minute) => (
+            <option key={minute} value={minute}>
+              {minute}
+            </option>
+          ))}
+        </Select>
+        <Select aria-label={`${label} second`} value={parts.second} onChange={(event) => update({ second: event.target.value })}>
+          {MINUTES_SECONDS.map((second) => (
+            <option key={second} value={second}>
+              {second}
+            </option>
+          ))}
+        </Select>
+      </div>
+    </Field>
+  );
+}
+
+function TemplateDatePicker({ label, value, onChange, hideLabel = false }) {
+  const selectedDate = parseVietnameseDateOnly(value);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [viewDate, setViewDate] = useState(selectedDate || new Date());
+
+  function openCalendar() {
+    setViewDate(selectedDate || new Date());
+    setCalendarOpen((prev) => !prev);
+  }
+
+  function moveMonth(offset) {
+    setViewDate((current) => new Date(current.getFullYear(), current.getMonth() + offset, 1));
+  }
+
+  const content = (
+    <div className="vn-date-picker">
+      <Input
+        value={value}
+        onChange={(_, data) => {
+          const nextDate = data.value;
+          onChange(nextDate);
+          const parsed = parseVietnameseDateOnly(nextDate);
+          if (parsed) setViewDate(parsed);
+        }}
+        placeholder="dd/mm/yyyy"
+      />
+      <Button type="button" onClick={openCalendar}>
+        Lịch
+      </Button>
+      {calendarOpen && (
+        <div className="vn-calendar-popover">
+          <div className="vn-calendar-head">
+            <Button size="small" type="button" onClick={() => moveMonth(-1)}>
+              ‹
+            </Button>
+            <strong>
+              Tháng {viewDate.getMonth() + 1}/{viewDate.getFullYear()}
+            </strong>
+            <Button size="small" type="button" onClick={() => moveMonth(1)}>
+              ›
+            </Button>
+          </div>
+          <div className="vn-calendar-grid weekdays">
+            {["CN", "T2", "T3", "T4", "T5", "T6", "T7"].map((day) => (
+              <span key={day}>{day}</span>
+            ))}
+          </div>
+          <div className="vn-calendar-grid">
+            {buildCalendarDays(viewDate).map((date) => {
+              const dateText = formatVietnameseDate(date);
+              const inMonth = date.getMonth() === viewDate.getMonth();
+              const active = value === dateText;
+              return (
+                <button
+                  className={`vn-calendar-day ${inMonth ? "" : "muted-day"} ${active ? "active" : ""}`}
+                  key={date.toISOString()}
+                  type="button"
+                  onClick={() => {
+                    onChange(dateText);
+                    setCalendarOpen(false);
+                  }}
+                >
+                  {date.getDate()}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  if (hideLabel) return content;
+  return <Field label={label}>{content}</Field>;
+}
+
+function buildMonitoringRange(mode, anchorDateText) {
+  const anchorDate = parseVietnameseDateOnly(anchorDateText);
+  if (!anchorDate) return null;
+
+  let startDate = new Date(anchorDate);
+  let endDate = new Date(anchorDate);
+
+  if (mode === "week") {
+    const day = anchorDate.getDay();
+    const mondayOffset = day === 0 ? -6 : 1 - day;
+    startDate = new Date(anchorDate);
+    startDate.setDate(anchorDate.getDate() + mondayOffset);
+    endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 6);
+  } else if (mode === "month") {
+    startDate = new Date(anchorDate.getFullYear(), anchorDate.getMonth(), 1);
+    endDate = new Date(anchorDate.getFullYear(), anchorDate.getMonth() + 1, 0);
+  } else if (mode === "quarter") {
+    const quarterStartMonth = Math.floor(anchorDate.getMonth() / 3) * 3;
+    startDate = new Date(anchorDate.getFullYear(), quarterStartMonth, 1);
+    endDate = new Date(anchorDate.getFullYear(), quarterStartMonth + 3, 0);
+  } else if (mode === "year") {
+    startDate = new Date(anchorDate.getFullYear(), 0, 1);
+    endDate = new Date(anchorDate.getFullYear(), 11, 31);
+  }
+
+  return {
+    start: vietnamesePartsToIso({
+      date: formatVietnameseDate(startDate),
+      hour: "00",
+      minute: "00",
+      second: "00"
+    }),
+    end: vietnamesePartsToIso({
+      date: formatVietnameseDate(endDate),
+      hour: "23",
+      minute: "59",
+      second: "59",
+      millisecond: 999
+    })
+  };
+}
+
+function buildReportPeriodLabel(mode, startIso, endIso) {
+  const startDate = fromVietnamIso(startIso);
+  const endDate = fromVietnamIso(endIso);
+  const month = String(startDate.getUTCMonth() + 1).padStart(2, "0");
+  const year = startDate.getUTCFullYear();
+
+  if (mode === "day") return `Ngày ${formatVietnameseDate(startDate)}`;
+  if (mode === "week") return `Tuần ${formatVietnameseDate(startDate)} - ${formatVietnameseDate(endDate)}`;
+  if (mode === "month") return `${month}/${year}`;
+  if (mode === "quarter") return `Quý ${Math.floor(startDate.getUTCMonth() / 3) + 1}/${year}`;
+  if (mode === "year") return `Năm ${year}`;
+  return `${formatVietnameseDate(startDate)} - ${formatVietnameseDate(endDate)}`;
+}
+
+function splitIsoToVietnameseDateTime(value) {
+  const date = fromVietnamIso(value);
+  return {
+    date: formatVietnameseDate(date),
+    hour: String(date.getUTCHours()).padStart(2, "0"),
+    minute: String(date.getUTCMinutes()).padStart(2, "0"),
+    second: String(date.getUTCSeconds()).padStart(2, "0")
+  };
+}
+
+function vietnamesePartsToIso({ date, hour = "00", minute = "00", second = "00", millisecond = 0 }) {
+  const parsed = parseVietnameseDateOnly(date);
+  if (!parsed) return "";
+  const hourNumber = Number(hour);
+  const minuteNumber = Number(minute);
+  const secondNumber = Number(second);
+  if (
+    hourNumber < 0 ||
+    hourNumber > 23 ||
+    minuteNumber < 0 ||
+    minuteNumber > 59 ||
+    secondNumber < 0 ||
+    secondNumber > 59
+  ) {
+    return "";
+  }
+  return new Date(Date.UTC(
+    parsed.getFullYear(),
+    parsed.getMonth(),
+    parsed.getDate(),
+    hourNumber - 7,
+    minuteNumber,
+    secondNumber,
+    millisecond
+  )).toISOString();
+}
+
+function fromVietnamIso(value) {
+  const date = new Date(value);
+  const safeDate = Number.isNaN(date.getTime()) ? new Date() : date;
+  return new Date(safeDate.getTime() + 7 * 60 * 60 * 1000);
+}
+
+function parseVietnameseDateOnly(value) {
+  const match = String(value || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!match) return null;
+  const [, day, month, year] = match;
+  const date = new Date(Number(year), Number(month) - 1, Number(day));
+  if (
+    date.getFullYear() !== Number(year) ||
+    date.getMonth() !== Number(month) - 1 ||
+    date.getDate() !== Number(day)
+  ) {
+    return null;
+  }
+  return date;
+}
+
+function formatVietnameseDate(date) {
+  return [
+    String(date.getDate()).padStart(2, "0"),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    date.getFullYear()
+  ].join("/");
+}
+
+function buildCalendarDays(viewDate) {
+  const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
+  const startOffset = firstDay.getDay();
+  const start = new Date(firstDay);
+  start.setDate(firstDay.getDate() - startOffset);
+
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(start);
+    date.setDate(start.getDate() + index);
+    return date;
+  });
+}
+
 function normalizeJsonInput(value) {
   if (!value) return {};
   if (typeof value === "object") return value;
@@ -933,21 +1250,42 @@ function escapeHtml(value) {
 }
 
 function syncReportPeriod(nextContext) {
+  const periodType = nextContext.report_period_type || "custom";
+  const periodLabel =
+    nextContext.report_period_label ||
+    buildReportPeriodLabel(periodType, nextContext.monitoring_start, nextContext.monitoring_end);
+  const legacyPeriod = splitReportPeriodForLegacyPlaceholders(periodLabel);
   return {
     ...nextContext,
-    report_month: inferReportMonth(nextContext.monitoring_end),
-    report_year: inferReportYear(nextContext.monitoring_end)
+    report_month: legacyPeriod?.month || inferReportMonth(nextContext.monitoring_end),
+    report_year: legacyPeriod?.year || inferReportYear(nextContext.monitoring_end),
+    report_period_label: periodLabel
   };
 }
 
+function splitReportPeriodForLegacyPlaceholders(label) {
+  const text = String(label || "").trim();
+  const quarterMatch = text.match(/^Quý\s*(\d+)\/(\d{4})$/i);
+  if (quarterMatch) return { month: `Quý ${quarterMatch[1]}`, year: quarterMatch[2] };
+
+  const monthMatch = text.match(/^(\d{1,2})\/(\d{4})$/);
+  if (monthMatch) return { month: monthMatch[1].padStart(2, "0"), year: monthMatch[2] };
+
+  const yearMatch = text.match(/^Năm\s*(\d{4})$/i);
+  if (yearMatch) return { month: "Năm", year: yearMatch[1] };
+
+  if (text) return { month: text, year: "" };
+  return null;
+}
+
 function inferReportMonth(value) {
-  const date = new Date(value);
+  const date = fromVietnamIso(value);
   if (Number.isNaN(date.getTime())) return "";
   return String(date.getUTCMonth() + 1).padStart(2, "0");
 }
 
 function inferReportYear(value) {
-  const date = new Date(value);
+  const date = fromVietnamIso(value);
   if (Number.isNaN(date.getTime())) return "";
   return String(date.getUTCFullYear());
 }

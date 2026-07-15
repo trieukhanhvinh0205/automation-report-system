@@ -88,6 +88,7 @@ function getColumnsForSection(sectionKey) {
     return [
       { key: "stt", label: "STT" },
       { key: "offense_id", label: "Offense ID trên SIEM" },
+      { key: "soar_id", label: "SOAR ID" },
       { key: "siem_rule", label: "Cảnh báo trên SIEM" },
       { key: "severity", label: "Mức độ" },
       { key: "priority", label: "Độ ưu tiên" },

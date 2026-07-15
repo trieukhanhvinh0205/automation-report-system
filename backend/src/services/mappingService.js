@@ -211,7 +211,8 @@ function mapAlertRow(row, index = 0) {
   const confirmKeyword = extractConfirmKeyword(row);
   return {
     stt: index + 1,
-    offense_id: row.soarId || row.siemAlertId || row.id,
+    offense_id: row.siemAlertId || row.id,
+    soar_id: row.soarId || "",
     siem_rule: row.alertName || row.soarCaseName,
     detected_time: formatTableDateTime(row.caseDetectedTime || row.timestamp),
     case_created_time: formatTableDateTime(row.openCaseTime),

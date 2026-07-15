@@ -640,7 +640,7 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
   const defaultStart = "2026-04-30T00:00:00.000Z";
   const defaultEnd = "2026-05-31T23:59:59.999Z";
   const [periodMode, setPeriodMode] = useState("month");
-  const [periodAnchorDate, setPeriodAnchorDate] = useState(formatVietnameseDate(fromVietnamIso(defaultEnd)));
+  const [periodAnchorDate, setPeriodAnchorDate] = useState(formatVietnameseDateUtc(fromVietnamIso(defaultEnd)));
   const [context, setContext] = useState(() => syncReportPeriod({
     customer_id: templateDetail?.customer_id || 1,
     monitoring_start: defaultStart,
@@ -1089,26 +1089,36 @@ function buildMonitoringRange(mode, anchorDateText) {
 
 function buildReportPeriodLabel(mode, startIso, endIso) {
   const startDate = fromVietnamIso(startIso);
-  const endDate = fromVietnamIso(endIso);
+  const endDate = getInclusiveVietnamEndDate(endIso);
   const month = String(startDate.getUTCMonth() + 1).padStart(2, "0");
   const year = startDate.getUTCFullYear();
 
-  if (mode === "day") return `Ngày ${formatVietnameseDate(startDate)}`;
-  if (mode === "week") return `Tuần ${formatVietnameseDate(startDate)} - ${formatVietnameseDate(endDate)}`;
+  if (mode === "day") return `Ngày ${formatVietnameseDateUtc(startDate)}`;
+  if (mode === "week") return `Tuần ${formatVietnameseDateUtc(startDate)} - ${formatVietnameseDateUtc(endDate)}`;
   if (mode === "month") return `${month}/${year}`;
   if (mode === "quarter") return `Quý ${Math.floor(startDate.getUTCMonth() / 3) + 1}/${year}`;
   if (mode === "year") return `Năm ${year}`;
-  return `${formatVietnameseDate(startDate)} - ${formatVietnameseDate(endDate)}`;
+  return `${formatVietnameseDateUtc(startDate)} - ${formatVietnameseDateUtc(endDate)}`;
 }
 
 function splitIsoToVietnameseDateTime(value) {
   const date = fromVietnamIso(value);
   return {
-    date: formatVietnameseDate(date),
+    date: formatVietnameseDateUtc(date),
     hour: String(date.getUTCHours()).padStart(2, "0"),
     minute: String(date.getUTCMinutes()).padStart(2, "0"),
     second: String(date.getUTCSeconds()).padStart(2, "0")
   };
+}
+
+function getInclusiveVietnamEndDate(value) {
+  const date = fromVietnamIso(value);
+  const isExclusiveMidnight =
+    date.getUTCHours() === 0 &&
+    date.getUTCMinutes() === 0 &&
+    date.getUTCSeconds() === 0 &&
+    date.getUTCMilliseconds() === 0;
+  return isExclusiveMidnight ? new Date(date.getTime() - 1) : date;
 }
 
 function vietnamesePartsToIso({ date, hour = "00", minute = "00", second = "00", millisecond = 0 }) {
@@ -1164,6 +1174,14 @@ function formatVietnameseDate(date) {
     String(date.getDate()).padStart(2, "0"),
     String(date.getMonth() + 1).padStart(2, "0"),
     date.getFullYear()
+  ].join("/");
+}
+
+function formatVietnameseDateUtc(date) {
+  return [
+    String(date.getUTCDate()).padStart(2, "0"),
+    String(date.getUTCMonth() + 1).padStart(2, "0"),
+    date.getUTCFullYear()
   ].join("/");
 }
 

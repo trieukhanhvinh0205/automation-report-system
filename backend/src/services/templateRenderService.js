@@ -98,16 +98,34 @@ function normalizeReportAlertColumns(sectionKey, columns = []) {
     return !hiddenKeys.has(String(key || "").toLowerCase()) && !hiddenLabels.has(normalizeText(label));
   });
 
-  if (visibleColumns.some((column) => getColumnKey(column) === "case_closed_time")) return visibleColumns;
+  const columnsWithSoarId = ensureColumnAfter(visibleColumns, {
+    key: "soar_id",
+    label: "SOAR ID",
+    afterKey: "offense_id"
+  });
 
   const closeTimeColumn = { key: "case_closed_time", label: "Thời gian đóng case" };
-  const createdTimeIndex = visibleColumns.findIndex((column) => getColumnKey(column) === "case_created_time");
-  if (createdTimeIndex === -1) return [...visibleColumns, closeTimeColumn];
+  if (columnsWithSoarId.some((column) => getColumnKey(column) === "case_closed_time")) return columnsWithSoarId;
+
+  const createdTimeIndex = columnsWithSoarId.findIndex((column) => getColumnKey(column) === "case_created_time");
+  if (createdTimeIndex === -1) return [...columnsWithSoarId, closeTimeColumn];
 
   return [
-    ...visibleColumns.slice(0, createdTimeIndex + 1),
+    ...columnsWithSoarId.slice(0, createdTimeIndex + 1),
     closeTimeColumn,
-    ...visibleColumns.slice(createdTimeIndex + 1)
+    ...columnsWithSoarId.slice(createdTimeIndex + 1)
+  ];
+}
+
+function ensureColumnAfter(columns, { key, label, afterKey }) {
+  if (columns.some((column) => getColumnKey(column) === key)) return columns;
+  const nextColumn = { key, label };
+  const anchorIndex = columns.findIndex((column) => getColumnKey(column) === afterKey);
+  if (anchorIndex === -1) return [...columns, nextColumn];
+  return [
+    ...columns.slice(0, anchorIndex + 1),
+    nextColumn,
+    ...columns.slice(anchorIndex + 1)
   ];
 }
 

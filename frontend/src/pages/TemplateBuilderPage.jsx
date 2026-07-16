@@ -1052,10 +1052,7 @@ function buildMonitoringRange(mode, anchorDateText) {
   let endDate = new Date(anchorDate);
 
   if (mode === "week") {
-    const day = anchorDate.getDay();
-    const mondayOffset = day === 0 ? -6 : 1 - day;
     startDate = new Date(anchorDate);
-    startDate.setDate(anchorDate.getDate() + mondayOffset);
     endDate = new Date(startDate);
     endDate.setDate(startDate.getDate() + 6);
   } else if (mode === "month") {

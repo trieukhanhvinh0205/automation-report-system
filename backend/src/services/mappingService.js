@@ -120,7 +120,7 @@ async function resolveElkField(field, values) {
   const detailRows = shouldKeepOnlyConfirmedDetailRows(field, config, filters)
     ? mappedRows.filter((row) => row.__confirmed === true)
     : mappedRows;
-  return detailRows.map(stripInternalFields);
+  return renumberRows(detailRows).map(stripInternalFields);
 }
 
 async function resolveElkRows({ filters, config, values }) {
@@ -242,6 +242,10 @@ function isConfirmedAlertRow(row) {
 function stripInternalFields(row) {
   const { __confirmed, ...publicRow } = row;
   return publicRow;
+}
+
+function renumberRows(rows = []) {
+  return rows.map((row, index) => ({ ...row, stt: index + 1 }));
 }
 
 function buildDescriptionWithConfirmKeyword(description, confirmKeyword) {

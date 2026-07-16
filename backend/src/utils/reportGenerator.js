@@ -69,9 +69,10 @@ function buildExportPath(uploadDir, reportId, format) {
   return path.join(uploadDir, filename);
 }
 
-async function generateElkCasesDocx({ rows, outputPath, title }) {
+async function generateElkCasesDocx({ rows, outputPath, title, fields }) {
+  const columns = resolveElkColumns(fields);
   const headerRow = new TableRow({
-    children: ELK_COLUMNS.map(
+    children: columns.map(
       (column) =>
         new TableCell({
           children: [new Paragraph({ children: [new TextRun({ text: column.label, bold: true })] })]
@@ -82,9 +83,9 @@ async function generateElkCasesDocx({ rows, outputPath, title }) {
   const bodyRows = rows.map(
     (item) =>
       new TableRow({
-        children: ELK_COLUMNS.map((column) =>
+        children: columns.map((column) =>
           new TableCell({
-            children: [new Paragraph(formatCellValue(item[column.key]))]
+            children: [new Paragraph(formatCellValue(getColumnValue(item, column), column))]
           })
         )
       })
@@ -106,7 +107,7 @@ async function generateElkCasesDocx({ rows, outputPath, title }) {
             children: [new TextRun({ text: title || "ELK Case Report", bold: true })]
           }),
           new Paragraph({
-            children: [new TextRun({ text: `Generated at: ${new Date().toISOString()}` })]
+            children: [new TextRun({ text: `Generated at: ${formatVietnamTime(new Date())}` })]
           }),
           table
         ]
@@ -118,64 +119,119 @@ async function generateElkCasesDocx({ rows, outputPath, title }) {
   await fs.promises.writeFile(outputPath, buffer);
 }
 
-async function generateElkCasesXlsx({ rows, outputPath, title }) {
+async function generateElkCasesXlsx({ rows, outputPath, title, fields }) {
+  const columns = resolveElkColumns(fields);
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "AutoReport";
   const worksheet = workbook.addWorksheet("ELK Cases");
   worksheet.addRow([title || "ELK Cases Report"]);
-  worksheet.addRow([`Generated at: ${new Date().toISOString()}`]);
+  worksheet.addRow([`Generated at: ${formatVietnamTime(new Date())}`]);
   worksheet.addRow([`Total exported cases: ${rows.length}`]);
   worksheet.addRow([]);
-  worksheet.addRow(ELK_COLUMNS.map((column) => column.label));
+  worksheet.addRow(columns.map((column) => column.label));
   rows.forEach((row) => {
-    worksheet.addRow(ELK_COLUMNS.map((column) => formatCellValue(row[column.key])));
+    worksheet.addRow(columns.map((column) => formatCellValue(getColumnValue(row, column), column)));
   });
-  worksheet.columns = ELK_COLUMNS.map((column) => ({
+  worksheet.columns = columns.map((column) => ({
     key: column.key,
     width: Math.min(Math.max(column.label.length + 6, 14), 36)
   }));
   await workbook.xlsx.writeFile(outputPath);
 }
 
-async function generateElkCasesCsv({ rows, outputPath }) {
+async function generateElkCasesCsv({ rows, outputPath, fields }) {
+  const columns = resolveElkColumns(fields);
   const lines = [
-    ELK_COLUMNS.map((column) => escapeCsv(column.label)).join(","),
-    ...rows.map((row) => ELK_COLUMNS.map((column) => escapeCsv(formatCellValue(row[column.key]))).join(","))
+    columns.map((column) => escapeCsv(column.label)).join(","),
+    ...rows.map((row) => columns.map((column) => escapeCsv(formatCellValue(getColumnValue(row, column), column))).join(","))
   ];
   await fs.promises.writeFile(outputPath, `\uFEFF${lines.join("\n")}`, "utf8");
 }
 
 const ELK_COLUMNS = [
-  { key: "timestamp", label: "Timestamp" },
-  { key: "openCaseTime", label: "Open Case Time" },
-  { key: "caseAnalyzedTime", label: "Analyzed Time" },
-  { key: "caseDetectedTime", label: "Detected Time" },
-  { key: "alertName", label: "Alert Name" },
-  { key: "severity", label: "Severity" },
-  { key: "priority", label: "Priority" },
-  { key: "status", label: "Status" },
-  { key: "sla", label: "SLA" },
-  { key: "tenant", label: "Tenant" },
-  { key: "analyst", label: "Analyst" },
-  { key: "resolution", label: "Resolution" },
-  { key: "reasonCloseCase", label: "Reason Close Case" },
-  { key: "messageConfirmCase", label: "Message Confirm Case" },
-  { key: "platform", label: "Platform" },
-  { key: "soarId", label: "SOAR ID" },
-  { key: "siemAlertId", label: "SIEM Alert ID" },
-  { key: "soarCaseName", label: "SOAR Case Name" },
-  { key: "tactics", label: "MITRE Tactics" },
-  { key: "techniques", label: "MITRE Techniques" },
-  { key: "timeDiffMinutes", label: "timeDiffMinutes" },
-  { key: "timeDetectedToAnalyzedMinutes", label: "timeDetectedtoAnalyzedMinutes" },
-  { key: "timeOpenToDetectedMinutes", label: "timeOpentoDetectedMinutes" }
+  { key: "timestamp", label: "@timestamp", elkName: "@timestamp" },
+  { key: "alertName", label: "siem_alert_name", elkName: "siem_alert_name" },
+  { key: "tenant", label: "tenant", elkName: "tenant" },
+  { key: "reasonCloseCase", label: "reason_close_case", elkName: "reason_close_case" },
+  { key: "resolution", label: "resolution", elkName: "resolution" },
+  { key: "analyst", label: "user_closed_case", elkName: "user_closed_case" },
+  { key: "siemAlertId", label: "siem_alert_id", elkName: "siem_alert_id" },
+  { key: "severity", label: "severity", elkName: "severity" },
+  { key: "timeDiffMinutes", label: "timeDiffMinutes", elkName: "timeDiffMinutes" },
+  { key: "caseAnalyzedTime", label: "case_analyzed_time", elkName: "case_analyzed_time" },
+  { key: "openCaseTime", label: "open_case_time", elkName: "open_case_time" },
+  { key: "caseDetectedTime", label: "case_detected_time", elkName: "case_detected_time" },
+  { key: "dayNight", label: "day_night", elkName: "day_night" },
+  { key: "fullNameCustomer", label: "full_name_customer", elkName: "full_name_customer" },
+  { key: "industry", label: "industry", elkName: "industry" },
+  { key: "localTimestamp", label: "local_timestamp", elkName: "local_timestamp" },
+  { key: "location", label: "location", elkName: "location" },
+  { key: "messageConfirmCase", label: "message_confirm_case", elkName: "message_confirm_case" },
+  { key: "tactics", label: "mitre_tactic", elkName: "mitre_tactic" },
+  { key: "techniques", label: "mitre_technique", elkName: "mitre_technique" },
+  { key: "platform", label: "platform", elkName: "platform" },
+  { key: "priority", label: "priority", elkName: "priority" },
+  { key: "sla", label: "sla", elkName: "sla" },
+  { key: "soarCaseName", label: "soar_case_name", elkName: "soar_case_name" },
+  { key: "soarId", label: "soar_id", elkName: "soar_id" },
+  { key: "status", label: "status", elkName: "status" },
+  { key: "timeDetectedToAnalyzedMinutes", label: "timeDetectedtoAnalyzedMinutes", elkName: "timeDetectedtoAnalyzedMinutes" },
+  { key: "timeOpenToDetectedMinutes", label: "timeOpentoDetectedMinutes", elkName: "timeOpentoDetectedMinutes" },
+  { key: "id", label: "_id", elkName: "_id" },
+  { key: "ignored", label: "_ignored", elkName: "_ignored" },
+  { key: "index", label: "_index", elkName: "_index" },
+  { key: "score", label: "_score", elkName: "_score" }
 ];
 
-function formatCellValue(value) {
+const ELK_DATE_COLUMN_KEYS = new Set([
+  "timestamp",
+  "caseAnalyzedTime",
+  "caseDetectedTime",
+  "openCaseTime",
+  "localTimestamp"
+]);
+
+function resolveElkColumns(fields = []) {
+  const requested = Array.isArray(fields) ? fields.map((field) => String(field).trim()).filter(Boolean) : [];
+  if (requested.length === 0) return ELK_COLUMNS;
+
+  const byKey = new Map(ELK_COLUMNS.map((column) => [column.key, column]));
+  const columns = requested
+    .map((field) => byKey.get(field))
+    .filter(Boolean);
+  return columns.length > 0 ? columns : ELK_COLUMNS;
+}
+
+function getColumnValue(row, column) {
+  if (row[column.key] !== undefined) return row[column.key];
+  return row.rawSource?.[column.elkName] ?? row.rawSource?.[column.key];
+}
+
+function formatCellValue(value, column) {
   if (Array.isArray(value)) return value.join(", ");
   if (value === null || value === undefined) return "";
+  if (column && ELK_DATE_COLUMN_KEYS.has(column.key)) return formatVietnamTime(value);
   if (typeof value === "object") return JSON.stringify(value);
   return String(value);
+}
+
+function formatVietnamTime(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value ?? "");
+
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  }).formatToParts(date);
+
+  const byType = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${byType.day}/${byType.month}/${byType.year}, ${byType.hour}:${byType.minute}:${byType.second}`;
 }
 
 function escapeCsv(value) {

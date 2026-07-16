@@ -152,6 +152,41 @@ function padTimePart(value) {
 
 const HOURS = Array.from({ length: 24 }, (_, index) => String(index).padStart(2, "0"));
 const MINUTES_SECONDS = Array.from({ length: 60 }, (_, index) => String(index).padStart(2, "0"));
+const DEFAULT_SELECTED_FIELDS = ["timestamp", "alertName", "severity", "priority", "tenant", "analyst", "status", "sla", "resolution", "reasonCloseCase", "soarId", "siemAlertId"];
+const ELK_FIELD_CATALOG = [
+  { key: "timestamp", label: "@timestamp", elkName: "@timestamp", type: "date", popular: true, sortable: "timestamp", value: (item) => formatDate(item.timestamp) },
+  { key: "alertName", label: "siem_alert_name", elkName: "siem_alert_name", type: "text", popular: true, sortable: "alertName", value: (item) => item.alertName },
+  { key: "tenant", label: "tenant", elkName: "tenant", type: "text", popular: true, sortable: "tenant", value: (item) => item.tenant },
+  { key: "reasonCloseCase", label: "reason_close_case", elkName: "reason_close_case", type: "text", popular: true, value: (item) => item.reasonCloseCase },
+  { key: "resolution", label: "resolution", elkName: "resolution", type: "text", popular: true, sortable: "resolution", value: (item) => item.resolution },
+  { key: "analyst", label: "user_closed_case", elkName: "user_closed_case", type: "text", popular: true, sortable: "analyst", value: (item) => item.analyst },
+  { key: "siemAlertId", label: "siem_alert_id", elkName: "siem_alert_id", type: "text", popular: true, value: (item) => item.siemAlertId },
+  { key: "severity", label: "severity", elkName: "severity", type: "text", popular: true, sortable: "severity", value: (item) => item.severity, render: (item) => <Badge className={`badge ${toSeverityClass(item.severity)}`}>{toLabel(item.severity)}</Badge> },
+  { key: "timeDiffMinutes", label: "timeDiffMinutes", elkName: "timeDiffMinutes", type: "number", popular: true, value: (item) => item.timeDiffMinutes },
+  { key: "caseAnalyzedTime", label: "case_analyzed_time", elkName: "case_analyzed_time", type: "date", popular: true, value: (item) => formatDate(item.caseAnalyzedTime) },
+  { key: "openCaseTime", label: "open_case_time", elkName: "open_case_time", type: "date", value: (item) => formatDate(item.openCaseTime) },
+  { key: "caseDetectedTime", label: "case_detected_time", elkName: "case_detected_time", type: "date", value: (item) => formatDate(item.caseDetectedTime) },
+  { key: "dayNight", label: "day_night", elkName: "day_night", type: "keyword" },
+  { key: "fullNameCustomer", label: "full_name_customer", elkName: "full_name_customer", type: "keyword" },
+  { key: "industry", label: "industry", elkName: "industry", type: "keyword" },
+  { key: "localTimestamp", label: "local_timestamp", elkName: "local_timestamp", type: "date" },
+  { key: "location", label: "location", elkName: "location", type: "keyword" },
+  { key: "messageConfirmCase", label: "message_confirm_case", elkName: "message_confirm_case", type: "text", value: (item) => item.messageConfirmCase },
+  { key: "tactics", label: "mitre_tactic", elkName: "mitre_tactic", type: "text", value: (item) => normalizeList(item.tactics).join(", ") },
+  { key: "techniques", label: "mitre_technique", elkName: "mitre_technique", type: "text", value: (item) => normalizeList(item.techniques).join(", ") },
+  { key: "platform", label: "platform", elkName: "platform", type: "text", value: (item) => item.platform },
+  { key: "priority", label: "priority", elkName: "priority", type: "text", sortable: "priority", value: (item) => item.priority },
+  { key: "sla", label: "sla", elkName: "sla", type: "boolean", value: (item) => item.sla },
+  { key: "soarCaseName", label: "soar_case_name", elkName: "soar_case_name", type: "text", value: (item) => item.soarCaseName },
+  { key: "soarId", label: "soar_id", elkName: "soar_id", type: "text", value: (item) => item.soarId },
+  { key: "status", label: "status", elkName: "status", type: "boolean", sortable: "status", value: (item) => item.status },
+  { key: "timeDetectedToAnalyzedMinutes", label: "timeDetectedtoAnalyzedMinutes", elkName: "timeDetectedtoAnalyzedMinutes", type: "number", value: (item) => item.timeDetectedToAnalyzedMinutes },
+  { key: "timeOpenToDetectedMinutes", label: "timeOpentoDetectedMinutes", elkName: "timeOpentoDetectedMinutes", type: "number", value: (item) => item.timeOpenToDetectedMinutes },
+  { key: "id", label: "_id", elkName: "_id", type: "keyword", meta: true, value: (item) => item.id },
+  { key: "ignored", label: "_ignored", elkName: "_ignored", type: "keyword", meta: true, value: (item) => normalizeList(item.ignored).join(", ") },
+  { key: "index", label: "_index", elkName: "_index", type: "keyword", meta: true, value: (item) => item.index },
+  { key: "score", label: "_score", elkName: "_score", type: "number", meta: true, value: (item) => item.score }
+];
 
 function ElkDashboard({ alerts, meta, filterOptions, loading, error, onRefresh, onExportWord, onExportFile, lastUpdated }) {
   const [tenantFilter, setTenantFilter] = useState("all");
@@ -175,7 +210,10 @@ function ElkDashboard({ alerts, meta, filterOptions, loading, error, onRefresh, 
   const [tacticsFilter, setTacticsFilter] = useState("");
   const [techniquesFilter, setTechniquesFilter] = useState("");
   const [q, setQ] = useState("");
+  const [qFocused, setQFocused] = useState(false);
   const [selectedCase, setSelectedCase] = useState(null);
+  const [fieldSearch, setFieldSearch] = useState("");
+  const [selectedFields, setSelectedFields] = useState(DEFAULT_SELECTED_FIELDS);
 
   const [sortField, setSortField] = useState("timestamp");
   const [sortDirection, setSortDirection] = useState("desc");
@@ -196,6 +234,31 @@ function ElkDashboard({ alerts, meta, filterOptions, loading, error, onRefresh, 
   const selectedAnalysts = analystFilter === "all" ? [] : analystFilter.split(",").filter(Boolean);
   const selectedSeverities = severityFilter === "all" ? [] : severityFilter.split(",").filter(Boolean);
   const selectedPriorities = priorityFilter === "all" ? [] : priorityFilter.split(",").filter(Boolean);
+  const selectedFieldSet = useMemo(() => new Set(selectedFields), [selectedFields]);
+  const selectedFieldColumns = useMemo(
+    () => selectedFields.map((fieldKey) => ELK_FIELD_CATALOG.find((field) => field.key === fieldKey)).filter(Boolean),
+    [selectedFields]
+  );
+  const isSummaryMode = selectedFieldColumns.length === 0;
+  const fieldSearchText = fieldSearch.trim().toLowerCase();
+  const popularFields = useMemo(() => ELK_FIELD_CATALOG.filter((field) => field.popular), []);
+  const availableFields = useMemo(() => ELK_FIELD_CATALOG.filter((field) => !field.meta), []);
+  const metaFields = useMemo(() => ELK_FIELD_CATALOG.filter((field) => field.meta), []);
+  const visibleFieldCatalog = useMemo(() => {
+    if (!fieldSearchText) return ELK_FIELD_CATALOG;
+    return ELK_FIELD_CATALOG.filter((field) =>
+      [field.label, field.elkName, field.key].some((value) => String(value || "").toLowerCase().includes(fieldSearchText))
+    );
+  }, [fieldSearchText]);
+  const visibleFieldSet = useMemo(() => new Set(visibleFieldCatalog.map((field) => field.key)), [visibleFieldCatalog]);
+  const selectedCatalog = visibleFieldCatalog.filter((field) => selectedFieldSet.has(field.key));
+  const popularCatalog = popularFields.filter((field) => visibleFieldSet.has(field.key));
+  const availableCatalog = availableFields.filter((field) => visibleFieldSet.has(field.key));
+  const metaCatalog = metaFields.filter((field) => visibleFieldSet.has(field.key));
+  const qSuggestions = useMemo(
+    () => buildQuerySuggestions(q, ELK_FIELD_CATALOG, alerts, filterOptions),
+    [alerts, filterOptions, q]
+  );
 
   useEffect(() => {
     setPage(1);
@@ -306,11 +369,24 @@ function ElkDashboard({ alerts, meta, filterOptions, loading, error, onRefresh, 
 
   function handleExportFile(format) {
     const { page: _page, size: _size, ...exportQuery } = buildQueryForBackend();
+    exportQuery.fields = selectedFields;
     if (format === "docx" && onExportWord) {
       onExportWord(exportQuery);
       return;
     }
     onExportFile?.(format, exportQuery);
+  }
+
+  function addField(fieldKey) {
+    setSelectedFields((current) => (current.includes(fieldKey) ? current : [...current, fieldKey]));
+  }
+
+  function removeField(fieldKey) {
+    setSelectedFields((current) => current.filter((item) => item !== fieldKey));
+  }
+
+  function resetSelectedFields() {
+    setSelectedFields(DEFAULT_SELECTED_FIELDS);
   }
 
   function goToPage(nextPage) {
@@ -438,7 +514,18 @@ function ElkDashboard({ alerts, meta, filterOptions, loading, error, onRefresh, 
           <Input value={soarCaseName} onChange={(_, data) => setSoarCaseName(data.value)} placeholder="soarCaseName" />
           <Input value={tacticsFilter} onChange={(_, data) => setTacticsFilter(data.value)} placeholder="tactics (comma-separated)" />
           <Input value={techniquesFilter} onChange={(_, data) => setTechniquesFilter(data.value)} placeholder="techniques (comma-separated)" />
-          <Input value={q} onChange={(_, data) => setQ(data.value)} placeholder="global search q" />
+          <QuerySuggestInput
+            value={q}
+            suggestions={qSuggestions}
+            open={qFocused && qSuggestions.length > 0}
+            onChange={setQ}
+            onFocus={() => setQFocused(true)}
+            onBlur={() => window.setTimeout(() => setQFocused(false), 120)}
+            onApply={(nextValue) => {
+              setQ(nextValue);
+              setQFocused(false);
+            }}
+          />
         </div>
       )}
 
@@ -458,53 +545,93 @@ function ElkDashboard({ alerts, meta, filterOptions, loading, error, onRefresh, 
         </MessageBar>
       )}
 
-      {paginationControls}
+      <div className="elk-discover">
+        <aside className="elk-fields-panel">
+          <div className="field-search-row">
+            <Input value={fieldSearch} onChange={(_, data) => setFieldSearch(data.value)} placeholder="Search field names" />
+            <Button type="button" onClick={resetSelectedFields}>
+              Reset
+            </Button>
+          </div>
+          {selectedFields.length > 0 && (
+            <FieldGroup
+              title="Selected fields"
+              count={selectedFields.length}
+              fields={selectedCatalog}
+              selected
+              onAdd={addField}
+              onRemove={removeField}
+            />
+          )}
+          <FieldGroup title="Popular fields" count={popularFields.length} fields={popularCatalog} onAdd={addField} onRemove={removeField} />
+          <FieldGroup title="Available fields" count={availableFields.length} fields={availableCatalog} onAdd={addField} onRemove={removeField} />
+          <FieldGroup title="Meta fields" count={metaFields.length} fields={metaCatalog} onAdd={addField} onRemove={removeField} />
+        </aside>
 
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th><button className="sort-btn" type="button" onClick={() => handleSort("timestamp")}>Timestamp</button></th>
-              <th><button className="sort-btn" type="button" onClick={() => handleSort("alertName")}>Alert</button></th>
-              <th><button className="sort-btn" type="button" onClick={() => handleSort("severity")}>Severity</button></th>
-              <th><button className="sort-btn" type="button" onClick={() => handleSort("priority")}>Priority</button></th>
-              <th><button className="sort-btn" type="button" onClick={() => handleSort("tenant")}>Tenant</button></th>
-              <th><button className="sort-btn" type="button" onClick={() => handleSort("analyst")}>Analyst</button></th>
-              <th>Status</th>
-              <th>SLA</th>
-              <th>Resolution</th>
-              <th>Reason Close</th>
-              <th>SOAR ID</th>
-              <th>SIEM Alert ID</th>
-            </tr>
-          </thead>
-          <tbody>
-            {!loading && alerts.length === 0 && (
-              <tr>
-                <td colSpan={12} className="muted">No alerts matched current filters</td>
-              </tr>
-            )}
-            {sortedAlerts.map((item) => (
-              <tr key={item.id || `${item.alertName}-${item.timestamp}`} onClick={() => setSelectedCase(item)}>
-                <td>{formatDate(item.timestamp)}</td>
-                <td>{item.alertName || "-"}</td>
-                <td><Badge className={`badge ${toSeverityClass(item.severity)}`}>{toLabel(item.severity)}</Badge></td>
-                <td>{toLabel(item.priority)}</td>
-                <td>{toLabel(item.tenant)}</td>
-                <td>{toLabel(item.analyst)}</td>
-                <td>{toLabel(item.status)}</td>
-                <td>{toLabel(item.sla)}</td>
-                <td>{toLabel(item.resolution)}</td>
-                <td>{toLabel(item.reasonCloseCase)}</td>
-                <td>{toLabel(item.soarId)}</td>
-                <td>{toLabel(item.siemAlertId)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <section className="elk-documents">
+          <div className="elk-documents-toolbar">
+            <strong>Documents ({total.toLocaleString()})</strong>
+            <span className="muted">Columns {isSummaryMode ? 1 : selectedFieldColumns.length}</span>
+          </div>
+          {paginationControls}
+
+          <div className="table-wrap elk-discover-table">
+            <table>
+              <thead>
+                <tr>
+                  <th className="row-expander-col"></th>
+                  {isSummaryMode ? (
+                    <>
+                      <th>
+                        <button className="sort-btn" type="button" onClick={() => handleSort("timestamp")}>
+                          @timestamp
+                        </button>
+                      </th>
+                      <th>Summary</th>
+                    </>
+                  ) : (
+                    selectedFieldColumns.map((field) => (
+                      <th key={field.key}>
+                        {field.sortable ? (
+                          <button className="sort-btn" type="button" onClick={() => handleSort(field.sortable)}>
+                            {field.label}
+                          </button>
+                        ) : (
+                          field.label
+                        )}
+                      </th>
+                    ))
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {!loading && alerts.length === 0 && (
+                  <tr>
+                    <td colSpan={(isSummaryMode ? 2 : selectedFieldColumns.length) + 1} className="muted">No alerts matched current filters</td>
+                  </tr>
+                )}
+                {sortedAlerts.map((item) => (
+                  <tr key={item.id || `${item.alertName}-${item.timestamp}`} onClick={() => setSelectedCase(item)}>
+                    <td className="row-expander-col">↗</td>
+                    {isSummaryMode ? (
+                      <>
+                        <td>{formatDate(item.timestamp)}</td>
+                        <td>{renderDocumentSummary(item, availableFields)}</td>
+                      </>
+                    ) : (
+                      selectedFieldColumns.map((field) => (
+                        <td key={field.key}>{renderFieldValue(field, item)}</td>
+                      ))
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {paginationControls}
+        </section>
       </div>
-
-      {paginationControls}
 
       {selectedCase && <CaseDetailDrawer item={selectedCase} onClose={() => setSelectedCase(null)} />}
     </Card>
@@ -537,6 +664,228 @@ function MultiSelectFilter({ label, options, selected, onToggle, onClear }) {
       </div>
     </div>
   );
+}
+
+function QuerySuggestInput({ value, suggestions, open, onChange, onFocus, onBlur, onApply }) {
+  const firstSuggestion = suggestions[0];
+
+  function handleKeyDown(event) {
+    if (event.key === "Enter" && firstSuggestion) {
+      event.preventDefault();
+      onApply(firstSuggestion.insertValue);
+    }
+    if (event.key === "Escape") {
+      onBlur?.();
+    }
+  }
+
+  return (
+    <div className="query-suggest">
+      <Input
+        value={value}
+        onChange={(_, data) => onChange(data.value)}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        onKeyDown={handleKeyDown}
+        placeholder="global search q"
+      />
+      {open && (
+        <div className="query-suggest-menu">
+          {suggestions.map((suggestion) => (
+            <button
+              className="query-suggest-item"
+              key={`${suggestion.type}-${suggestion.label}-${suggestion.insertValue}`}
+              type="button"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => onApply(suggestion.insertValue)}
+            >
+              <span className={`field-type-icon field-type-${suggestion.fieldType || "text"}`}>
+                {suggestion.type === "value" ? "=" : suggestion.type === "operator" ? "<>" : fieldIcon(suggestion.fieldType)}
+              </span>
+              <span>
+                <strong>{suggestion.label}</strong>
+                {suggestion.description && <small>{suggestion.description}</small>}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FieldGroup({ title, count, fields, selected = false, onAdd, onRemove }) {
+  return (
+    <div className="elk-field-group">
+      <div className="elk-field-group-title">
+        <strong>{title}</strong>
+        <span>{count}</span>
+      </div>
+      <div className="elk-field-list">
+        {fields.length === 0 && <span className="muted tiny">No fields</span>}
+        {fields.map((field) => (
+          <button
+            className={`elk-field-pill ${selected ? "selected" : ""}`}
+            key={field.key}
+            type="button"
+            onClick={() => (selected ? onRemove(field.key) : onAdd(field.key))}
+            title={selected ? "Remove field" : "Add field"}
+          >
+            <span className={`field-type-icon field-type-${field.type || "text"}`}>{fieldIcon(field.type)}</span>
+            <span>{field.label}</span>
+            <small>{selected ? "×" : "+"}</small>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function fieldIcon(type) {
+  if (type === "date") return "▦";
+  if (type === "number") return "#";
+  if (type === "boolean") return "◐";
+  if (type === "keyword") return "k";
+  return "t";
+}
+
+function renderFieldValue(field, item) {
+  if (field.render) return field.render(item);
+  const value = getFieldValue(field, item);
+  return toLabel(value);
+}
+
+function renderDocumentSummary(item, fields) {
+  const entries = fields
+    .map((field) => ({ field, value: toLabel(getFieldValue(field, item)) }))
+    .filter(({ value }) => value && value !== "-" && value !== "Unknown");
+
+  if (entries.length === 0) return <span className="muted">No fields</span>;
+
+  return (
+    <div className="document-summary">
+      {entries.map(({ field, value }) => (
+        <span className="summary-field" key={field.key}>
+          <strong>{field.label}</strong> {value}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function getFieldValue(field, item) {
+  if (field.value) return field.value(item);
+  if (item[field.key] !== undefined) return item[field.key];
+  return item.rawSource?.[field.elkName] ?? item.rawSource?.[field.key];
+}
+
+function buildQuerySuggestions(query, fields, rows, filterOptions) {
+  const text = String(query || "").trim();
+  const fieldValueMatch = text.match(/^([@\w.]+)\s*:\s*(.*)$/);
+  if (fieldValueMatch) {
+    const [, fieldName, rawValue] = fieldValueMatch;
+    const field = findQueryField(fields, fieldName);
+    if (!field) return [];
+    const needle = rawValue.replace(/^["']|["']$/g, "").trim().toLowerCase();
+    const operatorSuggestions = buildOperatorSuggestions(field, rawValue);
+    if (operatorSuggestions.length > 0) return operatorSuggestions;
+    return collectFieldValues(field, rows, filterOptions)
+      .filter((item) => !needle || item.toLowerCase().includes(needle))
+      .slice(0, 8)
+      .map((item) => ({
+        type: "value",
+        label: item,
+        description: field.label,
+        fieldType: field.type,
+        insertValue: `${field.label}:${formatQueryValue(item)}`
+      }));
+  }
+
+  const operatorMatch = text.match(/^([@\w.]+)\s*(<=|>=|<|>|=)?$/);
+  if (operatorMatch) {
+    const field = findQueryField(fields, operatorMatch[1]);
+    if (field && isComparableField(field)) {
+      return buildOperatorSuggestions(field, "");
+    }
+  }
+
+  const needle = text.toLowerCase();
+  return fields
+    .filter((field) => !needle || [field.label, field.elkName, field.key].some((item) => String(item || "").toLowerCase().includes(needle)))
+    .sort((a, b) => {
+      const aStarts = a.label.toLowerCase().startsWith(needle) ? 0 : 1;
+      const bStarts = b.label.toLowerCase().startsWith(needle) ? 0 : 1;
+      return aStarts - bStarts || a.label.localeCompare(b.label);
+    })
+    .slice(0, 10)
+    .map((field) => ({
+      type: "field",
+      label: field.label,
+      description: `${field.type || "text"} field`,
+      fieldType: field.type,
+      insertValue: `${field.label}:`
+    }));
+}
+
+function buildOperatorSuggestions(field, rawValue) {
+  if (!isComparableField(field)) return [];
+  const text = String(rawValue || "").trim();
+  if (text && !/^(<=|>=|<|>|=)?$/.test(text)) return [];
+  const operators = [
+    { operator: ":", label: ":", description: "equals some value" },
+    { operator: "<=", label: "<=", description: "is less than or equal to some value" },
+    { operator: ">=", label: ">=", description: "is greater than or equal to some value" },
+    { operator: "<", label: "<", description: "is less than some value" },
+    { operator: ">", label: ">", description: "is greater than some value" },
+    { operator: ":*", label: ": *", description: "exists in any form" }
+  ];
+  return operators.map((item) => ({
+    type: "operator",
+    label: item.label,
+    description: item.description,
+    fieldType: field.type,
+    insertValue: item.operator === ":*" ? `${field.label}:*` : `${field.label}${item.operator === ":" ? ":" : ` ${item.operator} `}`
+  }));
+}
+
+function isComparableField(field) {
+  return field.type === "number" || field.type === "date";
+}
+
+function findQueryField(fields, fieldName) {
+  const normalized = normalizeQueryField(fieldName);
+  return fields.find((field) =>
+    [field.label, field.elkName, field.key].some((item) => normalizeQueryField(item) === normalized)
+  );
+}
+
+function normalizeQueryField(value) {
+  return String(value || "").trim().replace(/[.\s]+/g, "_").toLowerCase();
+}
+
+function collectFieldValues(field, rows, filterOptions) {
+  const optionValues = getOptionValuesForField(field, filterOptions);
+  const values = new Set(optionValues);
+  rows.forEach((row) => {
+    normalizeList(getFieldValue(field, row)).forEach((item) => {
+      const value = String(item).trim();
+      if (value && value !== "Unknown" && value !== "-") values.add(value);
+    });
+  });
+  return Array.from(values).sort((a, b) => a.localeCompare(b));
+}
+
+function getOptionValuesForField(field, filterOptions) {
+  if (field.key === "tenant") return filterOptions?.tenants || [];
+  if (field.key === "analyst") return filterOptions?.analysts || [];
+  if (field.key === "severity") return filterOptions?.severities || [];
+  if (field.key === "priority") return filterOptions?.priorities || [];
+  return [];
+}
+
+function formatQueryValue(value) {
+  const text = String(value ?? "");
+  return /\s/.test(text) ? `"${text.replace(/"/g, '\\"')}"` : text;
 }
 
 function VietnameseDateTimeInput({ label, value, onChange }) {

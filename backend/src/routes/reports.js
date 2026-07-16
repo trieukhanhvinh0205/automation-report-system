@@ -91,23 +91,33 @@ router.post(
 );
 
 async function exportElkCases(req, res, format) {
-  const { title, page: _page, size: _size, ...filters } = req.body || {};
+  const { title, page: _page, size: _size, fields, ...filters } = req.body || {};
+  const selectedFields = parseExportFields(fields);
   const rows = await fetchAllElkRowsForExport(filters);
   const filename = `elk_cases_${Date.now()}.${format}`;
   const outputPath = path.join(config.uploadDir, filename);
   await fs.promises.mkdir(config.uploadDir, { recursive: true });
 
   if (format === "xlsx") {
-    await generateElkCasesXlsx({ rows, outputPath, title: title || "ELK Cases Report" });
+    await generateElkCasesXlsx({ rows, outputPath, title: title || "ELK Cases Report", fields: selectedFields });
   } else if (format === "csv") {
-    await generateElkCasesCsv({ rows, outputPath, title: title || "ELK Cases Report" });
+    await generateElkCasesCsv({ rows, outputPath, title: title || "ELK Cases Report", fields: selectedFields });
   } else {
-    await generateElkCasesDocx({ rows, outputPath, title: title || "ELK Cases Report" });
+    await generateElkCasesDocx({ rows, outputPath, title: title || "ELK Cases Report", fields: selectedFields });
   }
 
   res.setHeader("X-Exported-Rows", String(rows.length));
   res.setHeader("Access-Control-Expose-Headers", "Content-Disposition, X-Exported-Rows");
   return res.download(outputPath, filename);
+}
+
+function parseExportFields(fields) {
+  if (Array.isArray(fields)) return fields.map((field) => String(field).trim()).filter(Boolean);
+  if (!fields) return [];
+  return String(fields)
+    .split(",")
+    .map((field) => field.trim())
+    .filter(Boolean);
 }
 
 async function fetchAllElkRowsForExport(filters) {

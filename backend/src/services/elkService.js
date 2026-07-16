@@ -197,21 +197,7 @@ function buildElkQuery({
   }
 
   if (q) {
-    must.push({
-      multi_match: {
-        query: q,
-        fields: [
-          "siem_alert_name",
-          "soar_case_name",
-          "tenant",
-          "resolution",
-          "reason_close_case",
-          "message_confirm_case",
-          "user_closed_case"
-        ],
-        type: "best_fields"
-      }
-    });
+    must.push(buildGlobalSearchQuery(q));
   }
 
   if (confirmKeywordOnly === true || String(confirmKeywordOnly).toLowerCase() === "true") {
@@ -252,6 +238,170 @@ function buildTextShouldQuery(field, value) {
       ]
     }
   };
+}
+
+const GLOBAL_SEARCH_FIELDS = [
+  "siem_alert_name",
+  "soar_case_name",
+  "tenant",
+  "resolution",
+  "reason_close_case",
+  "message_confirm_case",
+  "user_closed_case"
+];
+
+const GLOBAL_SEARCH_FIELD_MAP = new Map([
+  ["@timestamp", { field: "@timestamp", type: "date" }],
+  ["timestamp", { field: "@timestamp", type: "date" }],
+  ["siem_alert_name", { field: "siem_alert_name", type: "text" }],
+  ["alertname", { field: "siem_alert_name", type: "text" }],
+  ["tenant", { field: "tenant", type: "keyword" }],
+  ["reason_close_case", { field: "reason_close_case", type: "text" }],
+  ["resolution", { field: "resolution", type: "keyword" }],
+  ["user_closed_case", { field: "user_closed_case", type: "keyword" }],
+  ["analyst", { field: "user_closed_case", type: "keyword" }],
+  ["siem_alert_id", { field: "siem_alert_id", type: "keyword" }],
+  ["severity", { field: "severity", type: "keyword" }],
+  ["timediffminutes", { field: "timeDiffMinutes", type: "number" }],
+  ["case_analyzed_time", { field: "case_analyzed_time", type: "date" }],
+  ["open_case_time", { field: "open_case_time", type: "date" }],
+  ["case_detected_time", { field: "case_detected_time", type: "date" }],
+  ["day_night", { field: "day_night", type: "keyword" }],
+  ["full_name_customer", { field: "full_name_customer", type: "text" }],
+  ["industry", { field: "industry", type: "keyword" }],
+  ["local_timestamp", { field: "local_timestamp", type: "date" }],
+  ["location", { field: "location", type: "keyword" }],
+  ["message_confirm_case", { field: "message_confirm_case", type: "text" }],
+  ["mitre_tactic", { field: "mitre_tactic", type: "keyword" }],
+  ["mitre_technique", { field: "mitre_technique", type: "keyword" }],
+  ["platform", { field: "platform", type: "keyword" }],
+  ["priority", { field: "priority", type: "keyword" }],
+  ["sla", { field: "sla", type: "boolean" }],
+  ["soar_case_name", { field: "soar_case_name", type: "text" }],
+  ["soar_id", { field: "soar_id", type: "keyword" }],
+  ["status", { field: "status", type: "boolean" }],
+  ["timedetectedtoanalyzedminutes", { field: "timeDetectedtoAnalyzedMinutes", type: "number" }],
+  ["timeopentodetectedminutes", { field: "timeOpentoDetectedMinutes", type: "number" }],
+  ["_id", { field: "_id", type: "keyword", meta: true }],
+  ["_index", { field: "_index", type: "keyword", meta: true }],
+  ["_score", { field: "_score", type: "number", meta: true }]
+]);
+
+function buildGlobalSearchQuery(value) {
+  const parsed = parseFieldSearch(value);
+  if (parsed) {
+    const spec = GLOBAL_SEARCH_FIELD_MAP.get(normalizeSearchField(parsed.field));
+    if (spec && (parsed.value !== "" || parsed.operator === "exists")) {
+      return buildFieldSearchQuery(spec, parsed.value, parsed.operator);
+    }
+  }
+
+  return {
+    multi_match: {
+      query: value,
+      fields: GLOBAL_SEARCH_FIELDS,
+      type: "best_fields"
+    }
+  };
+}
+
+function parseFieldSearch(value) {
+  const text = String(value || "").trim();
+  const rangeMatch = text.match(/^([@\w.]+)\s*(<=|>=|<|>|=)\s*(?:"([^"]*)"|'([^']*)'|(.+))$/);
+  if (rangeMatch) {
+    return {
+      field: rangeMatch[1],
+      operator: normalizeQueryOperator(rangeMatch[2]),
+      value: String(rangeMatch[3] ?? rangeMatch[4] ?? rangeMatch[5] ?? "").trim()
+    };
+  }
+
+  const match = text.match(/^([@\w.]+)\s*:\s*(?:"([^"]*)"|'([^']*)'|(.+))$/);
+  if (!match) return null;
+  const rawValue = String(match[2] ?? match[3] ?? match[4] ?? "").trim();
+  const operatorMatch = rawValue.match(/^(<=|>=|<|>|=)\s*(.+)$/);
+  if (operatorMatch) {
+    return {
+      field: match[1],
+      operator: normalizeQueryOperator(operatorMatch[1]),
+      value: operatorMatch[2].trim()
+    };
+  }
+  if (rawValue === "*") {
+    return {
+      field: match[1],
+      operator: "exists",
+      value: ""
+    };
+  }
+  return {
+    field: match[1],
+    operator: "eq",
+    value: rawValue
+  };
+}
+
+function normalizeQueryOperator(operator) {
+  if (operator === ">") return "gt";
+  if (operator === ">=") return "gte";
+  if (operator === "<") return "lt";
+  if (operator === "<=") return "lte";
+  return "eq";
+}
+
+function normalizeSearchField(value) {
+  return String(value || "").trim().replace(/[.\s]+/g, "_").toLowerCase();
+}
+
+function buildFieldSearchQuery(spec, value, operator = "eq") {
+  if (operator === "exists") {
+    return { exists: { field: spec.field } };
+  }
+  if (["gt", "gte", "lt", "lte"].includes(operator)) {
+    return { range: { [spec.field]: { [operator]: coerceFieldValue(spec.type, value) } } };
+  }
+  if (spec.meta) {
+    return { term: { [spec.field]: coerceFieldValue(spec.type, value) } };
+  }
+  if (spec.type === "text") {
+    return buildTextShouldQuery(spec.field, value);
+  }
+  if (spec.type === "number" || spec.type === "boolean") {
+    return { term: { [spec.field]: coerceFieldValue(spec.type, value) } };
+  }
+  if (spec.type === "date") {
+    return {
+      bool: {
+        minimum_should_match: 1,
+        should: [
+          { term: { [spec.field]: value } },
+          { match_phrase: { [spec.field]: value } }
+        ]
+      }
+    };
+  }
+  return {
+    bool: {
+      minimum_should_match: 1,
+      should: [
+        { term: { [`${spec.field}.keyword`]: value } },
+        { match_phrase: { [spec.field]: value } },
+        { match: { [spec.field]: value } }
+      ]
+    }
+  };
+}
+
+function coerceFieldValue(type, value) {
+  if (type === "number") {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : value;
+  }
+  if (type === "boolean") {
+    if (String(value).toLowerCase() === "true") return true;
+    if (String(value).toLowerCase() === "false") return false;
+  }
+  return value;
 }
 
 function buildConfirmKeywordQuery() {
@@ -321,6 +471,9 @@ function mapElkItem(item) {
   const source = item._source || {};
   return {
     id: item._id,
+    index: item._index,
+    ignored: item._ignored,
+    score: item._score,
     rawSource: source,
     timestamp: source["@timestamp"],
     alertName: source.siem_alert_name,

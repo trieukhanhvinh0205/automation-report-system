@@ -52,6 +52,23 @@ const PREVIEW_PERIODS = [
 ];
 const HOURS = Array.from({ length: 24 }, (_, index) => String(index).padStart(2, "0"));
 const MINUTES_SECONDS = Array.from({ length: 60 }, (_, index) => String(index).padStart(2, "0"));
+const CUSTOMER_DISPLAY_NAMES = {
+  VSP: "SOC Liên doanh Việt - Nga Vietsovpetro",
+  BD: "Công Ty Điều hành Dầu khí Biển Đông",
+  NVL: "Công ty TNHH Địa ốc NovaHome",
+  NVH: "Công ty TNHH Địa ốc NovaHome",
+  PVOIL: "Tổng công ty Dầu Việt Nam - Công ty Cổ phần",
+  PVO: "Tổng công ty Dầu Việt Nam - Công ty Cổ phần",
+  NAB: "Ngân hàng TMCP Nam Á",
+  VPC: "Bệnh viện Quốc tế Hồng Bàng",
+  MASVN: "Công ty Cổ phần Chứng Khoán Mirae Asset (Việt Nam)",
+  TDTP: "Công ty TNHH Nhiệt Điện Thủ Đức",
+  PQPOC: "Công ty Điều hành dầu khí Phú Quốc",
+  PVEP: "Tổng công ty Thăm dò Khai thác Dầu khí",
+  VBD: "Công Ty Cổ phần Tin Học - Bản Đồ Việt Nam (Vietbando)",
+  VB: "Ngân hàng thương mại cổ phần Việt Nam Thương Tín",
+  VAB: "Ngân hàng Thương mại Cổ phần Việt Á"
+};
 
 function TemplateBuilderPage() {
   const [step, setStep] = useState(0);
@@ -292,7 +309,7 @@ function TemplateUploadPage({ onUpload, busy, customers = [] }) {
           {customers.length === 0 && <option value="">Chưa có customer</option>}
           {customers.map((customer) => (
             <option key={customer.id} value={customer.id}>
-              {customer.code} - {customer.full_name || customer.name}
+              {formatCustomerOptionLabel(customer)}
             </option>
           ))}
         </Select>
@@ -305,6 +322,26 @@ function TemplateUploadPage({ onUpload, busy, customers = [] }) {
       </Button>
     </Card>
   );
+}
+
+function formatCustomerOptionLabel(customer = {}) {
+  const code = normalizeCustomerCode(customer.code || customer.name || customer.tenant);
+  const tenantCode = normalizeCustomerCode(customer.tenant);
+  const displayName =
+    CUSTOMER_DISPLAY_NAMES[code] ||
+    CUSTOMER_DISPLAY_NAMES[tenantCode] ||
+    customer.full_name ||
+    customer.name ||
+    code;
+  return `${code || customer.code || customer.name} - ${displayName}`;
+}
+
+function normalizeCustomerCode(value) {
+  return String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 }
 
 function TemplateExtractReviewPage({ draft, onChange, onSave, busy }) {

@@ -88,3 +88,23 @@ ON generated_reports(template_id, customer_id);
 INSERT INTO customers (code, name, full_name, tenant)
 VALUES ('PVOIL', 'PVOIL', 'Tổng công ty Dầu Việt Nam - CTCP', 'pvoil')
 ON CONFLICT (code) DO NOTHING;
+
+INSERT INTO customers (code, name, full_name, tenant)
+VALUES
+  ('VSP', 'VSP', 'SOC Liên doanh Việt - Nga Vietsovpetro', 'vsp'),
+  ('BD', 'BD', 'Công Ty Điều hành Dầu khí Biển Đông', 'bd'),
+  ('NVL', 'NVL', 'Công ty TNHH Địa ốc NovaHome', 'nvl'),
+  ('PVOIL', 'PVOIL', 'Tổng công ty Dầu Việt Nam - Công ty Cổ phần', 'pvoil'),
+  ('NAB', 'NAB', 'Ngân hàng TMCP Nam Á', 'nab'),
+  ('VPC', 'VPC', 'Bệnh viện Quốc tế Hồng Bàng', 'vpc'),
+  ('MASVN', 'MASVN', 'Công ty Cổ phần Chứng Khoán Mirae Asset (Việt Nam)', 'masvn'),
+  ('TDTP', 'TDTP', 'Công ty TNHH Nhiệt Điện Thủ Đức', 'tdtp'),
+  ('PQPOC', 'PQPOC', 'Công ty Điều hành dầu khí Phú Quốc', 'pqpoc'),
+  ('VBD', 'VBD', 'Công Ty Cổ phần Tin Học - Bản Đồ Việt Nam (Vietbando)', 'vbd'),
+  ('VB', 'VB', 'Ngân hàng thương mại cổ phần Việt Nam Thương Tín', 'vb'),
+  ('VAB', 'VAB', 'Ngân hàng Thương mại Cổ phần Việt Á', 'vab')
+ON CONFLICT (code) DO UPDATE SET
+  name = EXCLUDED.name,
+  full_name = EXCLUDED.full_name,
+  tenant = EXCLUDED.tenant,
+  updated_at = NOW();

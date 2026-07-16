@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const pool = require("../db");
 const { getElkFilterOptions } = require("../services/elkService");
+const { customerFromTenant } = require("../services/customerCatalog");
 
 function toCustomerCode(tenant) {
   const code = String(tenant || "")
@@ -43,18 +44,20 @@ async function syncCustomersFromElk() {
         continue;
       }
 
-      const code = toCustomerCode(tenant);
-      const name = toCustomerName(tenant);
+      const customer = customerFromTenant(tenant);
+      const code = customer.code || toCustomerCode(tenant);
+      const name = customer.name || toCustomerName(tenant);
+      const fullName = customer.full_name || name;
       const result = await client.query(
         `INSERT INTO customers (code, name, full_name, tenant)
          VALUES ($1, $2, $3, $4)
          ON CONFLICT (code) DO UPDATE SET
-           name = COALESCE(NULLIF(customers.name, ''), EXCLUDED.name),
-           full_name = COALESCE(NULLIF(customers.full_name, ''), EXCLUDED.full_name),
+           name = EXCLUDED.name,
+           full_name = EXCLUDED.full_name,
            tenant = EXCLUDED.tenant,
            updated_at = NOW()
          RETURNING id, code, tenant`,
-        [code, name, name, tenant]
+        [code, name, fullName, tenant]
       );
       existingByTenant.set(tenantKey, result.rows[0]);
     }

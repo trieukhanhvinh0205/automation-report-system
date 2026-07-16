@@ -1,5 +1,6 @@
 const pool = require("../db");
 const { searchElkReports, searchElkSeveritySummary } = require("./elkService");
+const { normalizeCustomer } = require("./customerCatalog");
 
 const DEFAULT_ELK_TABLE_LIMIT = 10000;
 const ELK_BATCH_SIZE = 500;
@@ -51,7 +52,7 @@ async function hydrateCustomer(values, customerId) {
   const result = await pool.query("SELECT * FROM customers WHERE id = $1", [customerId]);
   if (result.rowCount === 0) return;
 
-  const customer = result.rows[0];
+  const customer = normalizeCustomer(result.rows[0]);
   values.customer_id = customer.id;
   values.customer_code = values.customer_code || customer.code;
   values.customer_name = values.customer_name || customer.name;
@@ -86,8 +87,9 @@ async function resolvePostgresField(field, values) {
 
   const allowedColumns = new Set(["code", "name", "full_name", "tenant"]);
   const column = allowedColumns.has(config.column) ? config.column : "name";
-  const result = await pool.query(`SELECT ${column} FROM customers WHERE id = $1`, [customerId]);
-  return result.rows[0]?.[column] ?? field.default_value ?? null;
+  const result = await pool.query("SELECT * FROM customers WHERE id = $1", [customerId]);
+  const customer = normalizeCustomer(result.rows[0] || {});
+  return customer?.[column] ?? field.default_value ?? null;
 }
 
 async function resolveElkField(field, values) {

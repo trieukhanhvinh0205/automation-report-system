@@ -1,4 +1,5 @@
 const pool = require("../db");
+const { normalizeCustomer } = require("./customerCatalog");
 
 async function createTemplate({ templateJson, userId }) {
   const client = await pool.connect();
@@ -53,7 +54,7 @@ async function listTemplates({ customerId, includeGlobal = true } = {}) {
     params
   );
 
-  return result.rows;
+  return result.rows.map(normalizeCustomer);
 }
 
 async function listCustomers() {

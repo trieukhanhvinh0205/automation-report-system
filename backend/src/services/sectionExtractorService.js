@@ -91,7 +91,6 @@ function getColumnsForSection(sectionKey) {
       { key: "soar_id", label: "SOAR ID" },
       { key: "siem_rule", label: "Cảnh báo trên SIEM" },
       { key: "severity", label: "Mức độ" },
-      { key: "priority", label: "Độ ưu tiên" },
       { key: "detected_time", label: "Thời gian phát hiện" },
       { key: "case_created_time", label: "Thời gian tạo case" },
       { key: "case_closed_time", label: "Thời gian đóng case" },
@@ -99,8 +98,6 @@ function getColumnsForSection(sectionKey) {
       { key: "status", label: "Xử lý" },
       { key: "sla", label: "Đáp ứng SLA" },
       { key: "handling_detail", label: "Chi tiết xử lý" },
-      { key: "analyst", label: "Chuyên viên xử lý" },
-      { key: "resolution", label: "Kết luận xử lý" }
     ];
   }
 

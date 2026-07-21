@@ -2,13 +2,17 @@ const fs = require("fs");
 const path = require("path");
 const ExcelJS = require("exceljs");
 const {
+  AlignmentType,
   Document,
   Packer,
+  PageOrientation,
   Paragraph,
   Table,
   TableCell,
+  TableLayoutType,
   TableRow,
   TextRun,
+  VerticalAlign,
   WidthType
 } = require("docx");
 const pool = require("../db");
@@ -110,7 +114,19 @@ async function generateTemplateDocx({ templateJson, values, outputPath }) {
     children.push(new Paragraph(""));
   });
 
-  const doc = new Document({ sections: [{ children }] });
+  const doc = new Document({
+    sections: [
+      {
+        properties: {
+          page: {
+            size: { orientation: PageOrientation.LANDSCAPE },
+            margin: { top: 720, right: 540, bottom: 720, left: 540 }
+          }
+        },
+        children
+      }
+    ]
+  });
   const buffer = await Packer.toBuffer(doc);
   await fs.promises.writeFile(outputPath, buffer);
 }
@@ -388,6 +404,8 @@ function buildDocxTable(section, values) {
   const data = getValue(values, fieldKey);
   const rows = Array.isArray(data) ? data : objectToRows(data);
   const columns = normalizeColumns(rows, getSectionColumns(section));
+  const columnWidths = getDocxColumnWidths(section.section_key, columns);
+  const fontSize = getDocxTableFontSize(section.section_key);
 
   if (columns.length === 0) {
     return new Paragraph("Không có dữ liệu.");
@@ -395,20 +413,99 @@ function buildDocxTable(section, values) {
 
   return new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
+    layout: TableLayoutType.FIXED,
+    columnWidths,
+    margins: { top: 60, bottom: 60, left: 60, right: 60 },
     rows: [
       new TableRow({
-        children: columns.map((column) =>
-          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: column.label, bold: true })] })] })
+        tableHeader: true,
+        children: columns.map((column, index) =>
+          buildDocxTableCell(column.label, {
+            bold: true,
+            width: columnWidths[index],
+            fontSize,
+            alignment: getDocxColumnAlignment(column.key, true)
+          })
         )
       }),
       ...rows.map(
         (row) =>
           new TableRow({
-            children: columns.map((column) => new TableCell({ children: [new Paragraph(formatValue(row?.[column.key]))] }))
+            children: columns.map((column, index) =>
+              buildDocxTableCell(formatValue(row?.[column.key]), {
+                width: columnWidths[index],
+                fontSize,
+                alignment: getDocxColumnAlignment(column.key, false)
+              })
+            )
           })
       )
     ]
   });
+}
+
+function buildDocxTableCell(value, { bold = false, width, fontSize, alignment } = {}) {
+  return new TableCell({
+    width: width ? { size: width, type: WidthType.DXA } : undefined,
+    verticalAlign: VerticalAlign.CENTER,
+    margins: { top: 55, bottom: 55, left: 55, right: 55 },
+    children: [
+      new Paragraph({
+        alignment,
+        spacing: { before: 0, after: 0 },
+        children: [
+          new TextRun({
+            text: String(value ?? ""),
+            bold,
+            size: fontSize
+          })
+        ]
+      })
+    ]
+  });
+}
+
+function getDocxTableFontSize(sectionKey) {
+  return ["operation_alerts", "security_alerts", "incident_alerts"].includes(sectionKey) ? 14 : 18;
+}
+
+function getDocxColumnAlignment(key, isHeader) {
+  const normalizedKey = String(key || "").toLowerCase();
+  if (isHeader || ["stt", "severity", "status", "sla", "critical", "high", "medium", "low"].includes(normalizedKey)) {
+    return AlignmentType.CENTER;
+  }
+  return AlignmentType.LEFT;
+}
+
+function getDocxColumnWidths(sectionKey, columns = []) {
+  if (sectionKey === "case_summary") {
+    return columns.map((column) => {
+      const key = String(column.key || "").toLowerCase();
+      if (key === "name") return 5600;
+      return 1300;
+    });
+  }
+
+  if (!["operation_alerts", "security_alerts", "incident_alerts"].includes(sectionKey)) {
+    return columns.map(() => Math.floor(14000 / Math.max(columns.length, 1)));
+  }
+
+  const widths = {
+    stt: 520,
+    offense_id: 1900,
+    soar_id: 1500,
+    siem_rule: 1600,
+    severity: 850,
+    detected_time: 1350,
+    case_created_time: 1350,
+    case_closed_time: 1350,
+    description: 2300,
+    status: 850,
+    sla: 950,
+    handling_detail: 1500
+  };
+
+  return columns.map((column) => widths[String(column.key || "").toLowerCase()] || 1200);
 }
 
 function enabledSections(templateJson) {

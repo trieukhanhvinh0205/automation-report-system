@@ -180,11 +180,11 @@ function computeField(field, values) {
   if (key === "sla_on_time") return Number(values.total_processed_alerts || 0) - Number(values.sla_late || 0);
   if (key === "sla_late") return Number(values.sla_late || 0);
   if (key === "case_summary") {
-    return {
-      operation_alerts: buildSeveritySummary(values.operation_alerts || []),
-      security_alerts: buildSeveritySummary(values.security_alerts || []),
-      security_incidents: buildSeveritySummary(values.incident_alerts || [])
-    };
+    return [
+      { name: "Cảnh báo vận hành hệ thống", ...buildSeveritySummary(values.operation_alerts || []) },
+      { name: "Cảnh báo an ninh", ...buildSeveritySummary(values.security_alerts || []) },
+      { name: "Sự cố an ninh", ...buildSeveritySummary(values.incident_alerts || []) }
+    ];
   }
   return field.default_value ?? "";
 }

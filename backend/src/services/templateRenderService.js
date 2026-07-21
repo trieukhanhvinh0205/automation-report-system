@@ -89,8 +89,10 @@ function getSectionColumns(section) {
 
 function normalizeReportAlertColumns(sectionKey, columns = []) {
   if (!["operation_alerts", "security_alerts", "incident_alerts"].includes(sectionKey)) return columns;
-  const hiddenKeys = new Set(["tactics", "techniques", "tenant", "platform"]);
+  const hiddenKeys = new Set(["tactics", "techniques", "tenant", "platform", "priority", "analyst", "resolution"]);
   const hiddenLabels = new Set(["mitre tactics", "mitre techniques", "tenant", "nền tảng", "nen tang"]);
+
+  ["do uu tien", "chuyen vien xu ly", "ket luan xu ly"].forEach((label) => hiddenLabels.add(label));
 
   const visibleColumns = columns.filter((column) => {
     const key = typeof column === "string" ? column : column?.key;

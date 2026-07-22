@@ -106,6 +106,9 @@ async function resolveElkField(field, values) {
 
   if (ALERT_TABLE_FIELDS.has(field.field_key)) {
     values[`__summary_${field.field_key}`] = await searchElkSeveritySummary(filters);
+    if (!Array.isArray(values.__weekly_alert_summary)) {
+      values.__weekly_alert_summary = await buildWeeklyAlertSummary(filters, values);
+    }
   }
 
   const detailFilters = applyConfirmedOnlyFilter(field, config, filters);
@@ -246,6 +249,49 @@ function stripInternalFields(row) {
 
 function renumberRows(rows = []) {
   return rows.map((row, index) => ({ ...row, stt: index + 1 }));
+}
+
+async function buildWeeklyAlertSummary(filters = {}, values = {}) {
+  const ranges = buildWeeklyRanges(values.monitoring_start || filters.startTime, values.monitoring_end || filters.endTime);
+  if (ranges.length === 0) return [];
+
+  return Promise.all(
+    ranges.map(async (range, index) => {
+      const result = await searchElkReports({
+        ...filters,
+        startTime: range.start.toISOString(),
+        endTime: range.end.toISOString(),
+        confirmKeywordOnly: undefined,
+        from: 0,
+        size: 0
+      });
+      return {
+        label: `Tuần ${index + 1}`,
+        start: range.start.toISOString(),
+        end: range.end.toISOString(),
+        start_text: formatViDate(range.start),
+        end_text: formatViDate(range.end),
+        count: Number(result.total || 0)
+      };
+    })
+  );
+}
+
+function buildWeeklyRanges(startValue, endValue) {
+  const start = new Date(startValue);
+  const end = new Date(endValue);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return [];
+
+  const ranges = [];
+  let cursor = new Date(start);
+  while (cursor <= end && ranges.length < 12) {
+    const rangeStart = new Date(cursor);
+    const rangeEnd = new Date(cursor.getTime() + 7 * 24 * 60 * 60 * 1000 - 1000);
+    if (rangeEnd > end) rangeEnd.setTime(end.getTime());
+    ranges.push({ start: rangeStart, end: rangeEnd });
+    cursor = new Date(rangeEnd.getTime() + 1000);
+  }
+  return ranges;
 }
 
 function buildDescriptionWithConfirmKeyword(description, confirmKeyword) {

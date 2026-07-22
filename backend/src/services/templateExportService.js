@@ -1694,6 +1694,20 @@ function getAlertReportColumns() {
   ];
 }
 
+function getAlertReportColumns() {
+  return [
+    { key: "stt", label: "STT" },
+    { key: "offense_id", label: "Offense ID tr\u00ean SIEM" },
+    { key: "siem_rule", label: "C\u1ea3nh b\u00e1o tr\u00ean SIEM" },
+    { key: "detected_time", label: "Th\u1eddi gian ph\u00e1t hi\u1ec7n" },
+    { key: "case_created_time", label: "Th\u1eddi gian t\u1ea1o case" },
+    { key: "description", label: "C\u1ea3nh b\u00e1o" },
+    { key: "status", label: "X\u1eed l\u00fd" },
+    { key: "sla", label: "\u0110\u00e1p \u1ee9ng SLA" },
+    { key: "handling_detail", label: "Chi ti\u1ebft x\u1eed l\u00fd" }
+  ];
+}
+
 function getDocxColumnWidths(sectionKey, columns = []) {
   if (sectionKey === "case_summary") {
     return columns.map((column) => {
@@ -1709,13 +1723,14 @@ function getDocxColumnWidths(sectionKey, columns = []) {
 
   const widths = {
     stt: 520,
-    offense_id: 1900,
-    detected_time: 1500,
-    case_created_time: 1500,
-    description: 4300,
+    offense_id: 1500,
+    siem_rule: 1750,
+    detected_time: 1350,
+    case_created_time: 1350,
+    description: 3600,
     status: 900,
     sla: 1050,
-    handling_detail: 2300
+    handling_detail: 1800
   };
 
   return columns.map((column) => widths[String(column.key || "").toLowerCase()] || 1200);

@@ -417,30 +417,17 @@ function buildConfirmKeywordQuery() {
     "siem_alert_name",
     "handling_detail"
   ];
-  const phrases = [
-    "Đã Confirm KH",
-    "Da Confirm KH",
-    "Đã báo KH",
-    "Da bao KH",
-    "Confirm KH",
-    "KH confirm"
-  ];
-  const wildcards = [
-    "*confirm*kh*",
-    "*kh*confirm*",
-    "*báo*kh*",
-    "*bao*kh*"
-  ];
+  const phrases = ["\u0110\u00e3 Confirm KH", "Da Confirm KH"];
 
   return {
     bool: {
       minimum_should_match: 1,
       should: fields.flatMap((field) => [
         ...phrases.map((phrase) => ({ match_phrase: { [field]: phrase } })),
-        ...wildcards.map((value) => ({
+        ...phrases.map((phrase) => ({
           wildcard: {
             [`${field}.keyword`]: {
-              value,
+              value: `*${phrase}*`,
               case_insensitive: true
             }
           }
@@ -449,7 +436,6 @@ function buildConfirmKeywordQuery() {
     }
   };
 }
-
 function buildElkRequestConfig() {
   return {
     auth: {

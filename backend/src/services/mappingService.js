@@ -297,7 +297,7 @@ function buildWeeklyRanges(startValue, endValue) {
 function buildDescriptionWithConfirmKeyword(description, confirmKeyword) {
   const base = String(description || "").trim();
   if (!confirmKeyword) return base;
-  if (containsDaConfirmKh(base)) return canonicalConfirmKeyword(base);
+  if (containsDaConfirmKh(base)) return canonicalDaConfirmKh(base);
   return base ? `${base} - Đã Confirm KH` : "Đã Confirm KH";
 }
 
@@ -331,7 +331,7 @@ function collectStringValues(value, acc = []) {
 }
 
 function containsConfirmKeyword(value) {
-  return containsDaConfirmKh(value) || containsKhConfirm(value) || containsConfirmKh(value) || containsDaBaoKh(value);
+  return containsDaConfirmKh(value);
 }
 
 function containsDaConfirmKh(value) {
@@ -339,32 +339,16 @@ function containsDaConfirmKh(value) {
   return /(^|[^a-z0-9])da[^a-z0-9]+confirm[^a-z0-9]+kh([^a-z0-9]|$)/i.test(normalized);
 }
 
-function containsKhConfirm(value) {
-  const normalized = normalizeVietnamese(value);
-  return /(^|[^a-z0-9])kh[^a-z0-9]+confirm([^a-z0-9]|$)/i.test(normalized);
-}
-
-function containsConfirmKh(value) {
-  const normalized = normalizeVietnamese(value);
-  return /(^|[^a-z0-9])confirm[^a-z0-9]+kh([^a-z0-9]|$)/i.test(normalized);
-}
-
-function containsDaBaoKh(value) {
-  const normalized = normalizeVietnamese(value);
-  return /(^|[^a-z0-9])da[^a-z0-9]+bao[^a-z0-9]+kh([^a-z0-9]|$)/i.test(normalized);
-}
-
-function canonicalConfirmKeyword(value) {
-  return String(value || "")
-    .replace(/(?:đã|da)\s+confirm\s+kh/gi, "Đã Confirm KH")
-    .replace(/(?:đã|da)\s+báo\s+kh/gi, "Đã Confirm KH")
-    .replace(/da\s+bao\s+kh/gi, "Đã Confirm KH");
+function canonicalDaConfirmKh(value) {
+  return String(value || "").replace(/(?:\u0111\u00e3|da)\s+confirm\s+kh/gi, "\u0110\u00e3 Confirm KH");
 }
 
 function normalizeVietnamese(value) {
   return String(value || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\u0111/g, "d")
+    .replace(/\u0110/g, "D")
     .replace(/đ/g, "d")
     .replace(/Đ/g, "D")
     .toLowerCase();

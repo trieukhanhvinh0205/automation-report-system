@@ -462,6 +462,7 @@ function mapElkItem(item) {
     score: item._score,
     rawSource: source,
     timestamp: source["@timestamp"],
+    localTimestamp: source.local_timestamp,
     alertName: source.siem_alert_name,
     description: source.description || source.alert_description || source.siem_alert_description || source.message,
     severity: source.severity,

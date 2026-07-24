@@ -29,6 +29,7 @@ import {
   exportTemplate,
   getOnlyOfficeGeneratedConfig,
   getTemplate,
+  importSiemPvoilFile,
   listCustomers,
   listTemplates,
   previewTemplate,
@@ -693,17 +694,21 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
   const [onlyOfficePayload, setOnlyOfficePayload] = useState(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [siemImportFile, setSiemImportFile] = useState(null);
+  const [siemImportResult, setSiemImportResult] = useState(null);
+  const [siemImportBusy, setSiemImportBusy] = useState(false);
 
   async function runPreview() {
     if (!templateId) return;
     setBusy(true);
     try {
+      await ensureSiemImportReady();
       const data = await previewTemplate(templateId, context);
       setPreview(data);
       setActivePreviewTab("fields");
       setMessage(data.errors?.length ? "Preview có lỗi field bắt buộc" : "Preview đã render");
     } catch (err) {
-      setMessage(err.response?.data?.message || "Preview thất bại");
+      setMessage(err.response?.data?.message || err.message || "Preview thất bại");
     } finally {
       setBusy(false);
     }
@@ -713,6 +718,7 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
     if (!templateId) return;
     setBusy(true);
     try {
+      await ensureSiemImportReady();
       const data = await exportTemplate(templateId, { ...context, format });
       if (format === "docx" && data.generated_report_id) {
         const onlyOfficeConfig = await getOnlyOfficeGeneratedConfig(data.generated_report_id);
@@ -750,6 +756,7 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
     } catch (err) {
       setMessage(
         err.response?.data?.message ||
+          err.message ||
           (renderWordPreview ? "Generate Word Preview that bai" : "Export that bai")
       );
     } finally {
@@ -775,6 +782,41 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
       setMessage(err.response?.data?.message || "Tạo DOCX template thất bại");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function runSiemImport() {
+    if (!siemImportFile || !context.customer_id || siemImportBusy) return;
+    await importSelectedSiemFile();
+  }
+
+  async function ensureSiemImportReady() {
+    if (!siemImportFile || !context.customer_id) return null;
+    if (siemImportResult?.fileName === siemImportFile.name && Number(siemImportResult.importedRows || 0) > 0) {
+      return siemImportResult;
+    }
+    return importSelectedSiemFile();
+  }
+
+  async function importSelectedSiemFile() {
+    setSiemImportBusy(true);
+    setSiemImportResult(null);
+    try {
+      const data = await importSiemPvoilFile({
+        file: siemImportFile,
+        customerId: context.customer_id
+      });
+      setSiemImportResult(data);
+      if (Number(data.importedRows || 0) === 0) {
+        throw new Error("Import SIEM PVOIL không ghi được dòng nào vào database");
+      }
+      setMessage(`Import SIEM PVOIL thành công: ${data.importedRows}/${data.validRows} dòng hợp lệ`);
+      return data;
+    } catch (err) {
+      setMessage(err.response?.data?.message || err.message || "Import SIEM PVOIL thất bại");
+      throw err;
+    } finally {
+      setSiemImportBusy(false);
     }
   }
 
@@ -826,6 +868,42 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
         <Field label="Customer ID">
           <Input value={String(context.customer_id)} onChange={(_, data) => setContext({ ...context, customer_id: data.value })} />
         </Field>
+        <div className="siem-import-panel">
+          <Field label="Import SIEM PVOIL (.csv, .xlsx, .xls)">
+            <Input
+              type="file"
+              accept=".csv,.xlsx,.xls"
+              onChange={(event) => {
+                setSiemImportFile(event.target.files?.[0] || null);
+                setSiemImportResult(null);
+              }}
+            />
+          </Field>
+          <div className="button-row">
+            <Button
+              type="button"
+              onClick={runSiemImport}
+              disabled={!siemImportFile || !context.customer_id || siemImportBusy}
+            >
+              {siemImportBusy ? "Đang import..." : "Import SIEM PVOIL"}
+            </Button>
+            {siemImportFile && <Text size={200}>{siemImportFile.name}</Text>}
+          </div>
+          {siemImportResult && (
+            <div className="siem-import-result">
+              <strong>{siemImportResult.headerMode}</strong>
+              <span>
+                Tổng {siemImportResult.totalRows} dòng, hợp lệ {siemImportResult.validRows}, import {siemImportResult.importedRows}, lỗi {siemImportResult.invalidRows}, trùng {siemImportResult.duplicateRowsInFile}.
+              </span>
+              <span>
+                Offense ID: cột {siemImportResult.offenseIdColumnNumber}, index {siemImportResult.offenseIdColumnIndex}. Detection Time: cột {siemImportResult.detectionTimeColumnNumber}, index {siemImportResult.detectionTimeColumnIndex}.
+              </span>
+              {siemImportResult.errors?.length > 0 && (
+                <pre className="json-box error-box">{JSON.stringify(siemImportResult.errors, null, 2)}</pre>
+              )}
+            </div>
+          )}
+        </div>
         <div className="period-controls">
           <Field label="Kỳ báo cáo">
             <Select value={periodMode} onChange={(event) => applyPeriod(event.target.value, periodAnchorDate)}>

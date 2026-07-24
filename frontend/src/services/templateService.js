@@ -67,6 +67,16 @@ export async function templateizeTemplate(templateId, payload) {
   return response.data;
 }
 
+export async function importSiemPvoilFile({ file, customerId }) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("customerId", customerId);
+  const response = await apiClient.post("/api/siem-imports", formData, {
+    headers: { "Content-Type": "multipart/form-data" }
+  });
+  return response.data;
+}
+
 export async function downloadGeneratedTemplateReport(downloadUrl) {
   const response = await apiClient.get(downloadUrl, {
     responseType: "blob"

@@ -1,6 +1,8 @@
 const pool = require("../db");
 const { searchElkReports, searchElkSeveritySummary } = require("./elkService");
 const { normalizeCustomer } = require("./customerCatalog");
+const { normalizeOffenseId } = require("./siemImportParser");
+const { getImportedDetectionMap } = require("./siemImportService");
 
 const DEFAULT_ELK_TABLE_LIMIT = 10000;
 const ELK_BATCH_SIZE = 500;
@@ -113,7 +115,8 @@ async function resolveElkField(field, values) {
 
   const detailFilters = applyConfirmedOnlyFilter(field, config, filters);
   const rows = await resolveElkRows({ filters: detailFilters, config, values });
-  const mappedRows = rows.map((row, index) => mapAlertRow(row, index));
+  const rowsWithImportedDetection = await maybeAttachPvoilImportedDetection(rows, values, field);
+  const mappedRows = rowsWithImportedDetection.map((row, index) => mapAlertRow(row, index));
   if (ALERT_TABLE_FIELDS.has(field.field_key)) {
     values[`__all_${field.field_key}`] = mappedRows;
   }
@@ -172,6 +175,64 @@ function applyConfirmedOnlyFilter(field, config = {}, filters = {}) {
   };
 }
 
+async function maybeAttachPvoilImportedDetection(rows = [], values = {}, field = {}) {
+  if (!ALERT_TABLE_FIELDS.has(field.field_key) || !isPvoilCustomer(values)) return rows;
+
+  const siemAlertIds = rows.flatMap(collectImportCandidateIds);
+  const importedMap = await getImportedDetectionMap({
+    customerId: values.customer_id,
+    siemAlertIds
+  });
+
+  return rows.map((row) => {
+    const candidateIds = collectImportCandidateIds(row);
+    if (candidateIds.length === 0) {
+      return {
+        ...row,
+        importedDetectedTime: null,
+        importedDetectedTimeKey: null,
+        siemImportStatus: "INVALID_OFFENSE_ID"
+      };
+    }
+
+    const imported = candidateIds.map((id) => importedMap.get(id)).find(Boolean);
+    return {
+      ...row,
+      importedDetectedTime: imported?.detected_time || null,
+      importedDetectedTimeKey: imported?.detected_time_key || null,
+      siemImportStatus: imported ? "MATCHED" : "OFFENSE_NOT_FOUND"
+    };
+  });
+}
+
+function collectImportCandidateIds(row = {}) {
+  const raw = row.rawSource || row.raw || row.source || {};
+  return [
+    row.siemAlertId,
+    row.siem_alert_id,
+    row.offense_id,
+    row.offenseId,
+    row.soarId,
+    row.soar_id,
+    row.id,
+    raw.siem_alert_id,
+    raw["siem_alert_id.keyword"],
+    raw.offense_id,
+    raw.offenseId,
+    raw.soar_id,
+    raw._id,
+    raw.id
+  ]
+    .map(normalizeOffenseId)
+    .filter(Boolean)
+    .filter((id, index, all) => all.indexOf(id) === index);
+}
+
+function isPvoilCustomer(values = {}) {
+  const code = String(values.customer_code || values.customer_tenant || "").trim().toUpperCase();
+  return code === "PVOIL" || code === "PVO";
+}
+
 function computeField(field, values) {
   const key = field.field_key;
   if (key === "monitoring_start_text") return formatViDateTime(values.monitoring_start);
@@ -219,7 +280,9 @@ function mapAlertRow(row, index = 0) {
     offense_id: row.siemAlertId || row.id,
     soar_id: row.soarId || "",
     siem_rule: row.alertName || row.soarCaseName,
-    detected_time: formatTableDateTime(row.caseDetectedTime || row.timestamp),
+    detected_time: formatTableDateTime(resolveDetectedTime(row)),
+    detected_time_key: row.importedDetectedTimeKey || "",
+    siem_import_status: row.siemImportStatus || "",
     case_created_time: formatTableDateTime(row.openCaseTime),
     case_closed_time: formatTableDateTime(row.closedCaseTime || row.caseAnalyzedTime),
     description: buildDescriptionWithConfirmKeyword(row.description || row.reasonCloseCase || row.messageConfirmCase || row.resolution || "", confirmKeyword),
@@ -236,6 +299,11 @@ function mapAlertRow(row, index = 0) {
     platform: row.platform,
     __confirmed: Boolean(confirmKeyword)
   };
+}
+
+function resolveDetectedTime(row = {}) {
+  if (row.siemImportStatus) return row.importedDetectedTime || null;
+  return row.caseDetectedTime || row.detectedTime || row.localTimestamp || row.timestamp || null;
 }
 
 function isConfirmedAlertRow(row) {

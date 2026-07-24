@@ -1106,6 +1106,23 @@ tbody tr.selected {
   font-size: 13px;
 }
 
+.siem-import-panel {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  margin: 12px 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.siem-import-result {
+  display: grid;
+  gap: 4px;
+  font-size: 12px;
+  color: #475569;
+}
+
 .report-canvas {
   min-height: 720px;
   background: #ffffff;

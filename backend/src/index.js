@@ -9,6 +9,7 @@ const fileRoutes = require("./routes/files");
 const onlyofficeRoutes = require("./routes/onlyoffice");
 const templateRoutes = require("./routes/templates");
 const siemImportRoutes = require("./routes/siemImports");
+const viberImportRoutes = require("./routes/viberImports");
 const authMiddleware = require("./middlewares/auth");
 const errorHandler = require("./middlewares/error");
 
@@ -36,6 +37,7 @@ app.use("/files", authMiddleware, fileRoutes);
 app.use("/templates", authMiddleware, templateRoutes);
 app.use("/api/siem-imports", authMiddleware, siemImportRoutes);
 app.use("/siem-imports", authMiddleware, siemImportRoutes);
+app.use("/api/viber-imports", viberImportRoutes);
 app.use("/api/reports", reportRoutes); //ELK
 app.use(errorHandler);
 

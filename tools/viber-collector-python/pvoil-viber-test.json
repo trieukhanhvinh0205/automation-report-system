@@ -1,0 +1,488 @@
+{
+  "customerId": 1,
+  "tenant": "pvoil",
+  "sourceMachine": "SOC-WINDOWS-01",
+  "conversationName": "PVOIL-NCS",
+  "collectionScope": {
+    "start": "2026-09-01T00:00:00+07:00",
+    "end": "2026-09-18T23:59:59+07:00",
+    "scopeComplete": false,
+    "scrollRounds": 198,
+    "stopReason": "REPORT_START_REACHED_WITH_GAPS",
+    "totalNodesRead": 421,
+    "totalUniqueMessages": 76,
+    "alertsMatchingKeyword": 38,
+    "alertsInScope": 33,
+    "duplicateMessages": 15,
+    "zeroOverlapCount": 0,
+    "oldestDetectedTimeSeen": "2026-08-30T23:34:02+07:00",
+    "newestDetectedTimeSeen": "2026-09-18T06:09:31+07:00",
+    "reachedReportStart": true,
+    "invalidAlerts": 5,
+    "collectionGapDetected": true
+  },
+  "messages": [
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN ngoài giờ hành chính Chi tiết:\nThời gian: Sep 3, 2026, 9:24:14 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: lacviet.hiendv\nHành vi: Login VPN thành công ngoài giờ hành chính từ src.ip 27.78.73.144 (VN)\nTrạng thái: Login thành công \nRule: UC039.001\nSoar ID: PVO01a067a9c5e9719a\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ.",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-03T21:24:14+07:00",
+        "detectedTimeKey": "20260903212414",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 5,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN ngoài giờ hành . Chi tiết:\nThời gian: Sep 3, 2026, 10:07:43 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: maivt1@pvoil\nHành vi: Login VPN thành công ngoài giờ hành chính, src.ip: 222.254.193.54 (VN)\nTrạng thái: Login VPN thành công \nRule: UC036.001\nSoar ID: PVO01a067d33acc7c3c\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ.",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-03T22:07:43+07:00",
+        "detectedTimeKey": "20260903220743",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 6,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN ngoài giờ hành chính. Chi tiết:\nThời gian: Sep 4, 2026, 5:57:30 AM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: Longndh\nHành vi: Login VPN thành công ngoài giờ hành chính, src.ip: 104.28.205.74 (Cloudflare VN)\nTrạng thái: Login VPN thành công \nRule: UC240.001\nSoar ID: PVO01a0697f75e17111\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ.",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-04T05:57:30+07:00",
+        "detectedTimeKey": "20260904055730",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 8,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN ngoài giờ hành chính. Chi tiết:\nThời gian: Sep 4, 2026, 1:10:39 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: giangnl\nHành vi: Login VPN thành công từ vị trí địa lý bất thường từ src.ip: 52.144.68.42 (Italy)\nTrạng thái: Login VPN thành công \nRule: UC240.001\nSoar ID: PVO01a06b0c8d977af0\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ.",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-04T13:10:39+07:00",
+        "detectedTimeKey": "20260904131039",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 12,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN ngoài giờ hành chính. Chi tiết:\nThời gian: Sep 4, 2026, 3:00:23 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: giangnl\nHành vi: Login VPN thành công từ vị trí địa lý bất thường từ src.ip: 92.184.100.76 (France) và 92.184.106.255 (France)\nTrạng thái: Login VPN thành công \nRule: UC240.001\nSoar ID: PVO01a06b58b95d7760\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ.",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-04T15:00:23+07:00",
+        "detectedTimeKey": "20260904150023",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 13,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN ngoài giờ hành chính Chi tiết:\nThời gian: Sep 4, 2026, 11:37:44 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: maittn\nHành vi: Login VPN thành công ngoài giờ hành chính từ src.ip 115.74.228.68 (VN)\nTrạng thái: Login thành công \nRule: UC039.001\nSoar ID: PVO01a06d4bed4a730e\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ.",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-04T23:37:44+07:00",
+        "detectedTimeKey": "20260904233744",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 14,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN từ vị trí địa lý bất thường Chi tiết:\nThời gian: Sep 6, 2026, 2:51:55 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: anhltv\nHành vi: Login VPN thành công từ vị trí địa lý bất thường với src.ip: 182.16.234.43 (SGP)\nTrạng thái: Login thành công \nRule: UC240.001\nSoar ID: PVO01a075b6148b7187\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ.",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-06T14:51:55+07:00",
+        "detectedTimeKey": "20260906145155",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 17,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN từ vị trí địa lý bất thường Chi tiết:\nThời gian: Sep 6, 2026, 2:58:50 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: ⁨nhunglh@pvoil.com.vn⁩ \nHành vi: Login VPN thành công từ vị trí địa lý bất thường với src.ip: 118.201.46.253 (SGP)\nTrạng thái: Login thành công \nRule: UC240.001\nSoar ID: PVO01a075bbe4a47824\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-06T14:58:50+07:00",
+        "detectedTimeKey": "20260906145850",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 18,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN từ vị trí địa lý bất thường Chi tiết:\nThời gian: Sep 6, 2026, 8:53:03 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: toannt\nHành vi: Login VPN thành công ngoài giờ hành chính với src.ip: 103.156.2.198 (VN)\nTrạng thái: Login thành công \nRule: UC240.001\nSoar ID: PVO01a07701551b72c1\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ.",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-06T20:53:03+07:00",
+        "detectedTimeKey": "20260906205303",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 19,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.FeedDelegate_QMLTYPE_950.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN từ vị trí địa lý bất thường Chi tiết:\nThời gian: Sep 7, 2026, 12:25:06 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: phuongvh1\nHành vi: Login VPN thành công ngoài giờ hành chính với src.ip: 118.201.46.253 (Singapore)\nTrạng thái: Login thành công \nRule: UC240.001\nSoar ID: PVO01a07a44efbf7896\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ.",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-07T12:25:06+07:00",
+        "detectedTimeKey": "20260907122506",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 21,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN từ vị trí địa lý bất thường Chi tiết:\nThời gian: Sep 7, 2026, 12:26:10 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: hienlt1 và quyennd\nHành vi: Login VPN thành công ngoài giờ hành chính với src.ip: 118.201.46.253 (Singapore)\nTrạng thái: Login thành công \nRule: UC240.001\nSoar ID: PVO01a07a56da3f7a2e\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ.",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-07T12:26:10+07:00",
+        "detectedTimeKey": "20260907122610",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 24,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN từ vị trí địa lý bất thường Chi tiết:\nThời gian: Sep 7, 2026, 1:37:09 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: xuannv\nHành vi: Login VPN thành công ngoài giờ hành chính với src.ip: 118.201.46.253 (Singapore)\nTrạng thái: Login thành công \nRule: UC240.001\nSoar ID: PVO01a07a9911fd7a85\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ.",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-07T13:37:09+07:00",
+        "detectedTimeKey": "20260907133709",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 25,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN ngoài giờ hành . Chi tiết:\nThời gian: Sep 7, 2026, 6:26:30 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: tuannbm@pvoil\nHành vi: Login VPN thành công ngoài giờ hành chính, src.ip: 1.53.131.217 (VN)\nTrạng thái: Login VPN thành công \nRule: UC036.001\nSoar ID: PVO01a07ba0d5c87a18\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ.",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-07T18:26:30+07:00",
+        "detectedTimeKey": "20260907182630",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 31,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.FeedDelegate_QMLTYPE_950.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN ngoài giờ hành chính. Chi tiết:\nThời gian: Sep 7, 2026, 9:01:12 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: ⁨dbiz.tampt@pvoil.com.vn⁩\nHành vi: Login VPN thành công từ IP 42.118.63.207(VN)\nTrạng thái: Login thành công \nRule: UC039.001\nSoar ID: PVO01a07c2edb1877cd\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ.",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-07T21:01:12+07:00",
+        "detectedTimeKey": "20260907210112",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 32,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.FeedDelegate_QMLTYPE_950.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN ngoài giờ hành chính. Chi tiết:\nThời gian: Sep 7, 2026, 9:18:00 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: ngs.quyenntp\nHành vi: Login VPN thành công từ IP 171.243.49.67(VN)\nTrạng thái: Login thành công \nRule: UC039.001\nSoar ID: PVO01a07c2edb1877cd\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ.",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-07T21:18:00+07:00",
+        "detectedTimeKey": "20260907211800",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 34,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.FeedDelegate_QMLTYPE_950.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN ngoài giờ hành chính. Chi tiết:\nThời gian: Sep 7, 2026, 10:18:40 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: dbiz.toanvc\nHành vi: Login VPN thành công từ IP 115.78.237.122(VN)\nTrạng thái: Login thành công \nRule: UC039.001\nSoar ID: PVO01a07c7777fa790b\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ.",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-07T22:18:40+07:00",
+        "detectedTimeKey": "20260907221840",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 36,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN từ vị trí địa lý bất thường Chi tiết:\nThời gian: Sep 8, 2026, 10:09:48 AM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: xuannv\nHành vi: Login VPN thành công ngoài giờ hành chính với src.ip: 118.201.46.253 (Singapore)\nTrạng thái: Login thành công \nRule: UC240.001\nSoar ID: PVO01a07f0956ad7a95\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ.",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-08T10:09:48+07:00",
+        "detectedTimeKey": "20260908100948",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 39,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN ngoài giờ hành chính. Chi tiết:\nThời gian: Sep 8, 2026, 9:11:17 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: thiennd\nHành vi: Login VPN thành công từ IP 171.248.45.147(VN)\nTrạng thái: Login thành công \nRule: UC039.001\nSoar ID: PVO01a0815ece597b6f\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ.",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-08T21:11:17+07:00",
+        "detectedTimeKey": "20260908211117",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 42,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN ngoài giờ hành chính. Chi tiết:\nThời gian: Sep 8, 2026, 11:35:40 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: tienbq\nHành vi: Login VPN thành công từ IP 27.67.155.244 (VN)\nTrạng thái: Login thành công \nRule: UC039.001\nSoar ID: PVO01a081e1e91b7742\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ.",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-08T23:35:40+07:00",
+        "detectedTimeKey": "20260908233540",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 43,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN ngoài giờ hành chính. Chi tiết:\nThời gian: Sep 8, 2026, 11:51:12 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: ⁨dbiz.tampt@pvoil.com.vn⁩\nHành vi: Login VPN thành công từ IP 42.116.197.132(VN)\nTrạng thái: Login thành công \nRule: UC039.001\nSoar ID: PVO01a081f0590d716b\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-08T23:51:12+07:00",
+        "detectedTimeKey": "20260908235112",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 44,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN ngoài giờ hành chính. Chi tiết:\nThời gian: Sep 9, 2026, 5:08:50 AM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: hopvn\nHành vi: Login VPN thành công từ IP 14.241.159.109(VN)\nTrạng thái: Login thành công \nRule: UC039.001\nSoar ID:PVO01a083132bb37aca\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-09T05:08:50+07:00",
+        "detectedTimeKey": "20260909050850",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 45,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.FeedDelegate_QMLTYPE_950.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN từ địa chỉ địa lý bất thường, chi tiết:\nThời gian: Sep 9, 2026, 11:42:13 AM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: hienlt1\nHành vi: Login VPN thành công từ IP 118.201.46.253 (SGP)\nTrạng thái: Login thành công \nRule: UC240.001\nSoar ID: PVO01a0847b7c3b7dac\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-09T11:42:13+07:00",
+        "detectedTimeKey": "20260909114213",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 48,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi cần xác minh. Chi tiết:\nThời gian: Sep 10, 2026, 1:40:19 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: HQ-CHXD-REPORT-TOOL-01 @ 192.168.21.180\nUser thực hiện: pos\nHành vi: thực thi lệnh cmd.exe /c \"\"E:\\defender_192225\\WindowsDefenderATPLocalOnboardingScript.cmd\nTrạng thái: thực thi lệnh cmd.exe thành công\nRule: UC142.001\nSoar ID: PVO01a08a0daec17140\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị xem có thực hiện không ạ.",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-10T13:40:19+07:00",
+        "detectedTimeKey": "20260910134019",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 49,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.FeedDelegate_QMLTYPE_950.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN từ địa chỉ địa lý bất thường, chi tiết:\nThời gian: Sep 11, 2026, 8:38:04 AM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: hienlt1\nHành vi: Login VPN thành công từ IP 118.201.46.253 (SGP)\nTrạng thái: Login thành công \nRule: UC240.001\nSoar ID: PVO01a08e1ed70c770c\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-11T08:38:04+07:00",
+        "detectedTimeKey": "20260911083804",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 52,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN ngoài giờ hành chính. Chi tiết:\nThời gian: Sep 11, 2026, 9:41:53 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: ⁨dbiz.tampt@pvoil.com.vn⁩\nHành vi: Login VPN thành công từ IP 183.80.60.148 (VN)\nTrạng thái: Login thành công \nRule: UC039.001\nSoar ID: PVO01a090ef056d7d1e\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-11T21:41:53+07:00",
+        "detectedTimeKey": "20260911214153",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 63,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN từ địa chỉ địa lý bất thường, chi tiết:\nThời gian: Sep 12, 2026, 11:02:27 AM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: minhtc\nHành vi: Login VPN thành công từ IP 103.216.221.94 (SGP)\nTrạng thái: Login thành công \nRule: UC240.001\nSoar ID: PVO01a093cabc117913\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-12T11:02:27+07:00",
+        "detectedTimeKey": "20260912110227",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 65,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN ngoài giờ hành chính. Chi tiết:\nThời gian: Sep 12, 2026, 10:35:47 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: dbiz.toanvc\nHành vi: Login VPN thành công từ IP 171.250.181.112 (VN)\nTrạng thái: Login thành công \nRule: UC039.001\nSoar ID: PVO01a09644022270fa\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-12T22:35:47+07:00",
+        "detectedTimeKey": "20260912223547",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 66,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN ngoài giờ hành chính. Chi tiết:\nThời gian: Sep 13, 2026, 10:28:55 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: ⁨dbiz.tampt@pvoil.com.vn⁩\nHành vi: Login VPN thành công từ IP 183.80.60.148 (VN)\nTrạng thái: Login thành công \nRule: UC039.001\nSoar ID: PVO01a09b652e9f756c\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-13T22:28:55+07:00",
+        "detectedTimeKey": "20260913222855",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 68,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN từ địa chỉ địa lý bất thường, chi tiết:\nThời gian: Sep 14, 2026, 11:00:23 AM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: quyetnv\nHành vi: Login VPN thành công từ IP 172.94.25.5 (USA)\nTrạng thái: Login thành công \nRule: UC240.001\nSoar ID: PVO01a09e14ba59776c\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-14T11:00:23+07:00",
+        "detectedTimeKey": "20260914110023",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 70,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi bất thường. Chi tiết:\nThời gian: Sep 14, 2026, 11:24:33 AM\nMức độ cảnh báo: Trung bình\nMáy chủ ảnh hưởng: osbdev @ 192.168.21.75\nUser thực hiện: oracle\nHành vi : user oracle thêm vào group wheel, trước đó ghi nhận user login từ 10.0.2.232\nTrạng thái: user đã được thêm vào group thành công\nRule: UC135.002\nSoar ID: PVO01a09e2b82fd776b\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ.",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-14T11:24:33+07:00",
+        "detectedTimeKey": "20260914112433",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 71,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN ngoài giờ hành chính. Chi tiết:\nThời gian: Sep 15, 2026, 9:16:59 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: ngs.quyenntp\nHành vi: Login VPN thành công từ IP 171.243.48.164 (VN)\nTrạng thái: Login thành công \nRule: UC039.001\nSoar ID: PVO01a0a571ddb97ad1\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-15T21:16:59+07:00",
+        "detectedTimeKey": "20260915211659",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 72,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN ngoài giờ hành chính. Chi tiết:\nThời gian: Sep 15, 2026, 9:47:45 PM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: thiennd\nHành vi: Login VPN thành công từ IP 171.248.45.147 (VN)\nTrạng thái: Login thành công \nRule: UC039.001\nSoar ID: PVO01a0a58ce1f079e6\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-15T21:47:45+07:00",
+        "detectedTimeKey": "20260915214745",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 73,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    },
+    {
+      "externalMessageId": "QGuiApplication.MainWindow_QMLTYPE_79.ApplicationWindowContentControl.SplitView_QMLTYPE_862.StackView_QMLTYPE_402.TextEditItem_QMLTYPE_1029_QML_1032",
+      "messageSentTime": null,
+      "messageText": "Trong quá trình giám sát, đội SOC NCS phát hiện hành vi login VPN từ vị trí địa lý bất thường và ngoài giờ hành chính. Chi tiết:\nThời gian: Sep 18, 2026, 6:09:31 AM\nMức độ cảnh báo: Thấp\nMáy chủ ảnh hưởng: ASA @ 172.16.3.28\nUser thực hiện: thuymb\nHành vi: Login VPN thành công từ vị trí địa lý bất thường với source IP 152.165.123.223 (Japan)\nTrạng thái: Login VPN thành công \nRule: UC240.001\nSoar ID: PVO01a0b1a3d5eb77b3\nNCS khuyến nghị phía PVOIL kiểm tra với nhân sự quản trị user này xem có thực hiện không ạ",
+      "metadata": {
+        "tenant": "pvoil",
+        "detectedTime": "2026-09-18T06:09:31+07:00",
+        "detectedTimeKey": "20260918060931",
+        "conversationVerified": true,
+        "source": "viber-desktop-uia",
+        "sequence": 75,
+        "conversationVerificationMethod": "USER_CONFIRMED_CURRENT_CONVERSATION"
+      }
+    }
+  ]
+}

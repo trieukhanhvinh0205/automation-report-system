@@ -21,6 +21,7 @@ import {
   Text,
   Textarea
 } from "@fluentui/react-components";
+import { FullScreenMaximizeRegular, FullScreenMinimizeRegular } from "@fluentui/react-icons";
 import {
   createTemplate,
   deleteTemplateSection,
@@ -30,6 +31,7 @@ import {
   getOnlyOfficeGeneratedConfig,
   getTemplate,
   importSiemPvoilFile,
+  importViberJson,
   listCustomers,
   listTemplates,
   previewTemplate,
@@ -697,6 +699,10 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
   const [siemImportFile, setSiemImportFile] = useState(null);
   const [siemImportResult, setSiemImportResult] = useState(null);
   const [siemImportBusy, setSiemImportBusy] = useState(false);
+  const [viberImportFile, setViberImportFile] = useState(null);
+  const [viberImportResult, setViberImportResult] = useState(null);
+  const [viberImportBusy, setViberImportBusy] = useState(false);
+  const [onlyOfficeExpanded, setOnlyOfficeExpanded] = useState(false);
 
   async function runPreview() {
     if (!templateId) return;
@@ -808,15 +814,36 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
       });
       setSiemImportResult(data);
       if (Number(data.importedRows || 0) === 0) {
-        throw new Error("Import SIEM PVOIL không ghi được dòng nào vào database");
+        throw new Error("Import SIEM không ghi được dòng nào vào database");
       }
-      setMessage(`Import SIEM PVOIL thành công: ${data.importedRows}/${data.validRows} dòng hợp lệ`);
+      setMessage(`Import SIEM thành công: ${data.importedRows}/${data.validRows} dòng hợp lệ`);
       return data;
     } catch (err) {
-      setMessage(err.response?.data?.message || err.message || "Import SIEM PVOIL thất bại");
+      setMessage(err.response?.data?.message || err.message || "Import SIEM thất bại");
       throw err;
     } finally {
       setSiemImportBusy(false);
+    }
+  }
+
+  async function runViberImport() {
+    if (!viberImportFile || !context.customer_id || viberImportBusy) return;
+    setViberImportBusy(true);
+    setViberImportResult(null);
+    try {
+      const payload = JSON.parse(await viberImportFile.text());
+      const data = await importViberJson({
+        ...payload,
+        customerId: Number(payload.customerId || context.customer_id),
+        sourceMachine: payload.sourceMachine || "FRONTEND-JSON-IMPORT",
+        conversationName: payload.conversationName || "PVOIL-NCS"
+      });
+      setViberImportResult(data);
+      setMessage(`Import Viber thành công: ${data.parsedMessages} parsed, ${data.invalidMessages} invalid`);
+    } catch (err) {
+      setMessage(err.response?.data?.message || err.message || "Import Viber thất bại");
+    } finally {
+      setViberImportBusy(false);
     }
   }
 
@@ -855,7 +882,7 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
   }
 
   return (
-    <div className="preview-layout">
+    <div className={`preview-layout ${onlyOfficeExpanded ? "onlyoffice-expanded" : ""}`}>
       <Card className="panel preview-controls">
         <h3>Preview Context</h3>
         <div className="workflow-note">
@@ -869,7 +896,7 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
           <Input value={String(context.customer_id)} onChange={(_, data) => setContext({ ...context, customer_id: data.value })} />
         </Field>
         <div className="siem-import-panel">
-          <Field label="Import SIEM PVOIL (.csv, .xlsx, .xls)">
+          <Field label="Import SIEM (.csv, .xlsx, .xls)">
             <Input
               type="file"
               accept=".csv,.xlsx,.xls"
@@ -885,7 +912,7 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
               onClick={runSiemImport}
               disabled={!siemImportFile || !context.customer_id || siemImportBusy}
             >
-              {siemImportBusy ? "Đang import..." : "Import SIEM PVOIL"}
+              {siemImportBusy ? "Đang import..." : "Import SIEM"}
             </Button>
             {siemImportFile && <Text size={200}>{siemImportFile.name}</Text>}
           </div>
@@ -900,6 +927,39 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
               </span>
               {siemImportResult.errors?.length > 0 && (
                 <pre className="json-box error-box">{JSON.stringify(siemImportResult.errors, null, 2)}</pre>
+              )}
+            </div>
+          )}
+        </div>
+        <div className="siem-import-panel">
+          <Field label="Import tin nhắn Viber/WhatsApp (.json)">
+            <Input
+              type="file"
+              accept=".json,application/json"
+              onChange={(event) => {
+                setViberImportFile(event.target.files?.[0] || null);
+                setViberImportResult(null);
+              }}
+            />
+          </Field>
+          <div className="button-row">
+            <Button
+              type="button"
+              onClick={runViberImport}
+              disabled={!viberImportFile || !context.customer_id || viberImportBusy}
+            >
+              {viberImportBusy ? "Đang import..." : "Import tin nhắn JSON"}
+            </Button>
+            {viberImportFile && <Text size={200}>{viberImportFile.name}</Text>}
+          </div>
+          {viberImportResult && (
+            <div className="siem-import-result">
+              <strong>Batch {viberImportResult.batchId}</strong>
+              <span>
+                Nhận {viberImportResult.receivedMessages}, parsed {viberImportResult.parsedMessages}, bỏ qua {viberImportResult.ignoredMessages}, lỗi {viberImportResult.invalidMessages}, thêm mới {viberImportResult.insertedMessages}, cập nhật {viberImportResult.updatedMessages}.
+              </span>
+              {viberImportResult.errors?.length > 0 && (
+                <pre className="json-box error-box">{JSON.stringify(viberImportResult.errors, null, 2)}</pre>
               )}
             </div>
           )}
@@ -971,11 +1031,22 @@ function ReportPreviewPage({ templateDetail, draft, onReload }) {
         {preview?.errors?.length > 0 && <pre className="json-box error-box">{JSON.stringify(preview.errors, null, 2)}</pre>}
       </Card>
       <Card className="panel report-canvas">
-        <TabList selectedValue={activePreviewTab} onTabSelect={(_, data) => setActivePreviewTab(data.value)}>
-          <Tab value="fields">Fields Value</Tab>
-          <Tab value="format">Word Preview</Tab>
-          <Tab value="onlyoffice" disabled={!onlyOfficePayload}>OnlyOffice Editor</Tab>
-        </TabList>
+        <div className="preview-tab-toolbar">
+          <TabList selectedValue={activePreviewTab} onTabSelect={(_, data) => setActivePreviewTab(data.value)}>
+            <Tab value="fields">Fields Value</Tab>
+            <Tab value="format">Word Preview</Tab>
+            <Tab value="onlyoffice" disabled={!onlyOfficePayload}>OnlyOffice Editor</Tab>
+          </TabList>
+          {activePreviewTab === "onlyoffice" && onlyOfficePayload && (
+            <Button
+              appearance="subtle"
+              icon={onlyOfficeExpanded ? <FullScreenMinimizeRegular /> : <FullScreenMaximizeRegular />}
+              aria-label={onlyOfficeExpanded ? "Thu nhỏ OnlyOffice" : "Phóng to OnlyOffice"}
+              title={onlyOfficeExpanded ? "Thu nhỏ OnlyOffice" : "Phóng to OnlyOffice"}
+              onClick={() => setOnlyOfficeExpanded((value) => !value)}
+            />
+          )}
+        </div>
 
         {activePreviewTab === "fields" ? (
           <div className="fields-preview">

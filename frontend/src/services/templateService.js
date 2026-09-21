@@ -77,6 +77,11 @@ export async function importSiemPvoilFile({ file, customerId }) {
   return response.data;
 }
 
+export async function importViberJson(payload) {
+  const response = await apiClient.post("/api/viber-imports", payload);
+  return response.data;
+}
+
 export async function downloadGeneratedTemplateReport(downloadUrl) {
   const response = await apiClient.get(downloadUrl, {
     responseType: "blob"

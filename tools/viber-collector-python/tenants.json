@@ -1,0 +1,7 @@
+{
+  "pvoil": {
+    "customerId": 1,
+    "conversationNames": ["PVOIL-NCS"],
+    "alertKeyword": "trong quá trình"
+  }
+}

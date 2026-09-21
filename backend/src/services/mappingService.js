@@ -3,6 +3,7 @@ const { searchElkReports, searchElkSeveritySummary } = require("./elkService");
 const { normalizeCustomer } = require("./customerCatalog");
 const { normalizeOffenseId } = require("./siemImportParser");
 const { getImportedDetectionMap } = require("./siemImportService");
+const { enrichRowsWithViber } = require("./viberEnrichmentService");
 
 const DEFAULT_ELK_TABLE_LIMIT = 10000;
 const ELK_BATCH_SIZE = 500;
@@ -116,7 +117,10 @@ async function resolveElkField(field, values) {
   const detailFilters = applyConfirmedOnlyFilter(field, config, filters);
   const rows = await resolveElkRows({ filters: detailFilters, config, values });
   const rowsWithImportedDetection = await maybeAttachPvoilImportedDetection(rows, values, field);
-  const mappedRows = rowsWithImportedDetection.map((row, index) => mapAlertRow(row, index));
+  const rowsWithViber = ALERT_TABLE_FIELDS.has(field.field_key) && isPvoilCustomer(values)
+    ? await enrichRowsWithViber(rowsWithImportedDetection, values.customer_id)
+    : rowsWithImportedDetection;
+  const mappedRows = rowsWithViber.map((row, index) => mapAlertRow(row, index));
   if (ALERT_TABLE_FIELDS.has(field.field_key)) {
     values[`__all_${field.field_key}`] = mappedRows;
   }
@@ -275,6 +279,7 @@ function buildMitreSummary(rows = []) {
 
 function mapAlertRow(row, index = 0) {
   const confirmKeyword = extractConfirmKeyword(row);
+  const hasViberMatch = String(row.viberMatchStatus || "").startsWith("MATCHED");
   return {
     stt: index + 1,
     offense_id: row.siemAlertId || row.id,
@@ -283,9 +288,11 @@ function mapAlertRow(row, index = 0) {
     detected_time: formatTableDateTime(resolveDetectedTime(row)),
     detected_time_key: row.importedDetectedTimeKey || "",
     siem_import_status: row.siemImportStatus || "",
-    case_created_time: formatTableDateTime(row.openCaseTime),
+    case_created_time: formatTableDateTime(hasViberMatch ? (row.viberCaseCreatedTime || row.openCaseTime) : row.openCaseTime),
     case_closed_time: formatTableDateTime(row.closedCaseTime || row.caseAnalyzedTime),
-    description: buildDescriptionWithConfirmKeyword(row.description || row.reasonCloseCase || row.messageConfirmCase || row.resolution || "", confirmKeyword),
+    description: hasViberMatch
+      ? row.viberWarning
+      : buildDescriptionWithConfirmKeyword(row.description || row.reasonCloseCase || row.messageConfirmCase || row.resolution || "", confirmKeyword),
     status: row.status === false ? "Đã đóng" : String(row.status ?? ""),
     sla: row.sla === false ? "Không đáp ứng" : row.sla === true ? "Đáp ứng" : "",
     handling_detail: row.handlingDetail || row.messageConfirmCase || "",
@@ -297,6 +304,9 @@ function mapAlertRow(row, index = 0) {
     techniques: row.techniques,
     resolution: row.resolution,
     platform: row.platform,
+    viber_match_status: row.viberMatchStatus || "",
+    viber_message_id: row.viberMessageId || "",
+    viber_external_message_id: row.viberExternalMessageId || "",
     __confirmed: Boolean(confirmKeyword)
   };
 }
